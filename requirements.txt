@@ -1,0 +1,8 @@
+opencv-python-headless  # Use 'headless' to save 50MB (removes unused GUI components)
+easyocr
+pydirectinput
+pyautogui
+pyinstaller
+thefuzz
+numpy
+pygetwindow
