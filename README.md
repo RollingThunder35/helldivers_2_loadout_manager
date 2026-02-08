@@ -2,7 +2,7 @@
 
 [![Latest Release](https://img.shields.io/github/v/release/YOUR_USERNAME/YOUR_REPO_NAME?label=Latest%20Release&color=brightgreen)](https://github.com/RollingThunder35/helldivers_2_loadout_manager/releases/latest)
 
-An automated loadout management tool for Helldivers 2.
+An automated loadout manager tool for Helldivers 2.
 
 ## 📥 Downloads
 
