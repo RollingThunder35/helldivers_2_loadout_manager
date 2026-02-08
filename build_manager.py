@@ -7,7 +7,8 @@ import shutil
 # Configuration
 ENTRY_POINT = 'helldivers_loadout_manager_gui.py'
 APP_NAME = 'SEAF_Loadout_Manager'
-ICON_PATH = r'D:\Python Projects\helldivers_2_loadout_manager\helldivers_super_earth_logo.ico' # Ensure you converted your PNG to ICO
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ICON_PATH = os.path.join(BASE_DIR,'helldivers_super_earth_logo.ico')
 
 # Clear out original build
 if exists(fr".\dist\{APP_NAME}"):

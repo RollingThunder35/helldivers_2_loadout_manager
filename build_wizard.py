@@ -4,7 +4,8 @@ import os
 # Configuration
 ENTRY_POINT = 'setup_wizard.py'
 APP_NAME = 'SEAF_Setup_Wizard'
-ICON_PATH = 'D:\Python Projects\helldivers_2_loadout_manager\helldivers_super_earth_logo.ico' # Ensure you converted your PNG to ICO
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ICON_PATH = os.path.join(BASE_DIR,'helldivers_super_earth_logo.ico')
 
 params = [
     ENTRY_POINT,
