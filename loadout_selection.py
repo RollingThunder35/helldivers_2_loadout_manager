@@ -142,7 +142,7 @@ class LoadoutManager:
         self.update_dbs()
         return success
 
-    def navigate_to(self, target_name, db_key, item_roi, cat_roi=None, category_list=None):
+    def navigate_to(self, target_name, db_key, item_roi, cat_roi=None, category_list=None, validation_score=75):
         db = self.dbs.get(db_key)
         retry_counter = 2
 
@@ -153,11 +153,12 @@ class LoadoutManager:
                 print(f"X No match for '{target_name}. Closest match: {best_match_key} at {match_score}'")
                 return False
             else:
-                print(f"'{best_match_key}' matched '{target_name}' at {match_score}%")
+                print(f"'{best_match_key}' matched '{target_name}'")
 
             target_data = db[best_match_key]
             target_pos = target_data["pos"]
             target_cat = target_data.get("cat")
+            print(f"Target Location: {target_pos}")
 
             # 2. ALIGN CATEGORY (Same as before)
             if target_cat and category_list:
@@ -193,12 +194,11 @@ class LoadoutManager:
             # 5. FINAL VERIFICATION
             time.sleep(0.3)
             ver_value = ocr_from_screen(item_roi).upper()
-            if fuzz.partial_ratio(best_match_key.upper(), ver_value) > 75:
+            if fuzz.partial_ratio(best_match_key.upper(), ver_value) > validation_score:
                 pydirectinput.press(self.config.get_control("ENTER MENU"))
                 return True
 
             retry_counter = retry_counter - 1
-            ocr_from_screen(cat_roi, f"ver_alignment_{best_match_key}")
             print(f"Verification failed. Found {ver_value} instead. Retry {retry_counter} more times.")
         print("All verification failed. Terminating Search...")
         return False
@@ -341,12 +341,15 @@ def apply_loadout(manager, loadout, progress_callback=None):
         pydirectinput.press(manager.config.get_control("SWITCH", "q"))
         time.sleep(0.5)
 
-        def handle_equipment(target, db_key, item_roi, cat_roi=None, cat_list=None):
+        def handle_equipment(target, db_key, item_roi, cat_roi=None, cat_list=None, custom_validation_thresh=None):
             # Inner helper for repetitive equipment navigation
             pydirectinput.press(manager.config.get_control("ENTER MENU", "space"))
             time.sleep(0.3)
 
-            success = manager.navigate_to(target, db_key, item_roi, cat_roi, cat_list)
+            if custom_validation_thresh:
+                success = manager.navigate_to(target, db_key, item_roi, cat_roi, cat_list, validation_score=custom_validation_thresh)
+            else:
+                success = manager.navigate_to(target, db_key, item_roi, cat_roi, cat_list)
 
             # Equipment sub-menus require a manual escape
             pydirectinput.press('escape')
@@ -359,7 +362,8 @@ def apply_loadout(manager, loadout, progress_callback=None):
         handle_equipment(
             loadout["helmet"],
             "helmet",
-            manager.config.get_roi("HELMET_ITEM_ROI", (0, 0, 0, 0))
+            manager.config.get_roi("HELMET_ITEM_ROI", (0, 0, 0, 0)),
+            custom_validation_thresh=50 #Lower helmet threshold to stop repeat failures
         )
 
         # ARMOR

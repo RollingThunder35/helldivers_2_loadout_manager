@@ -94,7 +94,9 @@ class SetupWizard:
             },
             {
                 "menu": "ARMORY: HELMETS",
-                "instructions": "Back out of the current selection menu and select the helmet picture.",
+                "instructions": "Back out of the current selection menu and select the helmet picture. Before beginning, "
+                                "turn your helldiver so their shoulder is facing the text. This reduces the armor shine "
+                                "and gives you the best OCR reading.",
                 "targets": {
                     "HELMET_ITEM_ROI": "Draw box over a helmet's name (e.g. CW-4 ARCTIC RANGER). "
                                       "Include only the name, not description."
@@ -108,7 +110,7 @@ class SetupWizard:
                     "ARMOR_ITEM_ROI": "Draw box over a armor's name (e.g. FS-37 RAVAGER). Keep in mind that some "
                                       "armor names are longer and your selected area should be able to "
                                       "accommodate the longest one. Select only the name, not description.",
-                    "ARMOR_PERKS_ROI": "Draw box over a armor passive in the bottom corner (e.g. EXTRA PADDING). "
+                    "ARMOR_PERK_ROI": "Draw box over a armor passive in the bottom corner (e.g. EXTRA PADDING). "
                                        "Do not include the icon in this area. Include only the name, not description."
                 }
             },
