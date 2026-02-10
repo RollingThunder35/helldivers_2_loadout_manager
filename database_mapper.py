@@ -71,8 +71,12 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
     Assumes starting at (0,0) in the first category.
     """
     master_db = {}
-    fuzzy_threshold = 95
     config = ConfigManager()
+
+    if "strat" in db_name:
+        fuzzy_threshold = 95
+    else:
+        fuzzy_threshold = 85
 
     # Give a waiting period before beginning operations
     print(f"\n--- Initializing {db_name} Mapping ---")
@@ -82,15 +86,22 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
 
     for cat_name in category_list:
         print(f"Mapping Category: {cat_name}")
+        cat_counter = 0
 
         # Ensure we are in the right tab
-        while True:
+        while cat_counter < len(category_list)*2:
             current_tab = ocr_from_screen(cat_roi)
             print(f"Have {current_tab} and want {cat_name}")
             if fuzz.partial_ratio(cat_name.upper(), current_tab.upper()) > fuzzy_threshold:
+                cat_counter = -1
                 break
             pydirectinput.press(config.get_control("MENU TAB RIGHT","c"))
             time.sleep(0.5)
+            cat_counter += 1
+
+        if cat_counter != -1:
+            print(f"Unable to find category {cat_name}. Skipping...")
+            continue
 
         for row in range(35):
             row_anchor = ocr_from_screen(item_roi)
