@@ -28,3 +28,4 @@ if __name__ == '__main__':
     print(f"\n--- {APP_NAME} Build Complete ---")
     os.mkdir(fr".\dist\{APP_NAME}\item_databases")
     os.mkdir(fr".\dist\{APP_NAME}\loadouts")
+    shutil.copy2(".\loadouts\gl_medic_example.json", fr".\dist\{APP_NAME}\loadouts")

@@ -1,0 +1,24 @@
+{
+    "name": "GL MEDIC",
+    "factions": [
+        "TERMINIDS",
+        "AUTOMATONS",
+        "JET BRIGADE"
+    ],
+    "armor": "TR-117 ALPHA COMMANDER (MEDIUM MED-KIT)",
+    "helmet": "TR-117 ALPHA COMMANDER",
+    "primary": "DBS-2 DOUBLE FREEDOM",
+    "secondary": "LAS-58 TALON",
+    "grenade": "6-123 THERMITE",
+    "cape": "THE CAPE OF STARS AND SUFFRAGE",
+    "boosters": [
+        "EXPERIMENTAL INFUSION",
+        "VITALITY ENHANCEMENT",
+        "MUSCLE ENHANCEMENT",
+        "LOCALIZATION CONFUSION"
+    ],
+    "stratagem_1": "GL-21 GRENADE LAUNCHER",
+    "stratagem_2": "B-1 SUPPLY PACK",
+    "stratagem_3": "AIMLS-4X ROCKET SENTRY",
+    "stratagem_4": "ORBITAL 12OMM HE BARRAGE"
+}
