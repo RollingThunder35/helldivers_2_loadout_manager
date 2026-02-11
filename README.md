@@ -8,7 +8,7 @@ An automated loadout manager tool for Helldivers 2.
 
 | Component | Link |
 | :--- | :--- |
-| **Main Manager** | [Download SES_Loadout_Manager.zip](https://github.com/RollingThunder35/helldivers_2_loadout_manager/releases/latest/download/SEAF_Loadout_Manager.zip) |
-| **Setup Wizard** | [Download HCM_Setup_Wizard.exe](https://github.com/RollingThunder35/helldivers_2_loadout_manager/releases/latest/download/SEAF_Setup_Wizard.zip) |
+| **Main Manager** | [Download SEAF_Loadout_Manager.zip](https://github.com/RollingThunder35/helldivers_2_loadout_manager/releases/latest/download/SEAF_Loadout_Manager.zip) |
+| **Setup Wizard** | [Download SEAF_Setup_Wizard.exe](https://github.com/RollingThunder35/helldivers_2_loadout_manager/releases/latest/download/SEAF_Setup_Wizard.zip) |
 
 ---
