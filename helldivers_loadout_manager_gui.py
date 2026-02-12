@@ -561,7 +561,7 @@ class LoadoutGUI:
                         armor_type = details.get("cat", "").upper()  # e.g., Light, Medium, Heavy
 
                         # Format: NAME (TYPE PASSIVE)
-                        display_text = f"{item_name} ({armor_type} {passive})"
+                        display_text = f"{item_name} ({armor_type}, {passive})" #literally one comma to make it easier to visually distinguish between <type> and <passive>
                         search_haystack = display_text.upper()
 
                     # --- FUZZY MATCHING ---
