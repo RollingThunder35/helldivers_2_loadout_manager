@@ -24,8 +24,10 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
+        # 1. Install the small CPU version of Torch first
         pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-        pip install opencv-python-headless easyocr pydirectinput pyautogui pyinstaller
+        # 2. Install everything else from your requirements file
+        pip install -r requirements.txt
 
     - name: Build Manager and Wizard
       run: |
