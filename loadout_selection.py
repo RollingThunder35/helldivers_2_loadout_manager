@@ -143,10 +143,10 @@ class LoadoutManager:
         return success
 
     def navigate_to(self, target_name, db_key, item_roi, cat_roi=None, category_list=None, validation_score=75):
-        db = self.dbs.get(db_key)
         retry_counter = 2
 
         while retry_counter > 0:
+            db = self.dbs.get(db_key)
             # 1. FIND TARGET DATA (Fuzzy Search)
             best_match_key, match_score = self._find_best_match(target_name, list(db.keys()))
             if match_score < 80:
@@ -156,9 +156,11 @@ class LoadoutManager:
                 print(f"'{best_match_key}' matched '{target_name}'")
 
             target_data = db[best_match_key]
-            target_pos = target_data["pos"]
-            target_cat = target_data.get("cat")
+            target_pos = target_data.get("pos", [])
+            target_cat = target_data.get("cat", '')
+            print(f"Accessing Index: {best_match_key}")
             print(f"Target Location: {target_pos}")
+            print(f"Target Category: {target_cat}")
 
             # 2. ALIGN CATEGORY (Same as before)
             if target_cat and category_list:
