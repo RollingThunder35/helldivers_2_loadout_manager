@@ -1,5 +1,5 @@
 import environment_setup
-from utils import focus_hd2_win, validate_loadout_files, validate_loadout_data, ConfigurationError
+from utils import focus_hd2_win, validate_loadout_files, validate_loadout_data, ConfigurationError, ROIOverlay
 import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -14,15 +14,11 @@ import logging
 
 # noinspection PyTypeChecker
 class LoadoutGUI:
-    def __init__(self, manager):
-        self.loadout_map = None
-        self.current_loadout_data = None
-        self.manager = manager
-        self.is_watching = False
-        self.button_pressed = None
+    root: tk.Tk
+    manager: LoadoutManager
+    overlay_tool: ROIOverlay
 
-        validate_loadout_files(os.path.join(self.manager.config.basepath, "loadouts"))
-
+    def __init__(self):
         # --- Root Configuration ---
         self.root = tk.Tk()
         self.root.title("SEAF Loadout Manager")
@@ -34,6 +30,16 @@ class LoadoutGUI:
         self.root.option_add("*TCombobox*Listbox*Font", ("Courier", 10))
         self.root.option_add("*TCombobox*Listbox*selectBackground", "#2ecc71")
         self.root.option_add("*TCombobox*Listbox*selectForeground", "#2c3e50")
+
+        self.overlay_tool = ROIOverlay(self.root)
+
+        self.loadout_map = None
+        self.current_loadout_data = None
+        self.manager = LoadoutManager(self.overlay_tool)
+        self.is_watching = False
+        self.button_pressed = None
+
+        validate_loadout_files(os.path.join(self.manager.config.basepath, "loadouts"))
 
         # --- GLOBAL STYLE REFINEMENT ---
         style = ttk.Style()
@@ -534,7 +540,7 @@ class LoadoutGUI:
         selection_display = tk.Label(status_frame, text="Empty Loadout", justify="left", bg="#1a1a1a", fg="#aaa",
                                      font=("Courier", 8))
         selection_display.pack()
-        local_manager.update_dbs()
+        self.manager.update_dbs()
 
         # --- INNER LOGIC FUNCTIONS ---
         def update_search(event=None):
@@ -712,7 +718,6 @@ def patched_print(*args, **kwargs):
     logging.info(msg)
 
 if __name__ == '__main__':
-    local_manager = LoadoutManager()
-    app = LoadoutGUI(local_manager)
+    app = LoadoutGUI()
     app.root.mainloop()
 

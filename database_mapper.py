@@ -11,7 +11,7 @@ import pydirectinput
 from thefuzz import fuzz
 
 from environment_setup import get_base_path
-from utils import ConfigurationError, focus_hd2_win, ConfigManager
+from utils import ConfigurationError, focus_hd2_win, ConfigManager, ROIOverlay
 
 # Activate failsafe
 pyautogui.FAILSAFE = True
@@ -21,51 +21,58 @@ pyautogui.PAUSE = 0.1
 reader = easyocr.Reader(['en'], gpu=False, verbose=False)
 
 
-def ocr_from_screen(roi_coords, save_str=None):
+def ocr_from_screen(roi_coords, roi_overlay=None):
     """
     roi_coords: (left, top, width, height)
     """
+
     # 1. Validation Check
     if not roi_coords or any(v <= 0 for v in roi_coords[2:]):
-        raise ConfigurationError(f"Invalid ROI: {roi_coords}. Please re-run the Setup Wizard.")
+        raise ConfigurationError(f"Invalid ROI: {roi_coords}.")
 
-    # 2. Attempt the screenshot
-    screenshot = pyautogui.screenshot(region=roi_coords)
-    if screenshot is None:
-        raise ConfigurationError(f"Failed to capture screenshot at {roi_coords}.")
+    if roi_overlay:
+        roi_overlay.show_at(roi_coords=roi_coords)
 
-    frame = np.array(screenshot)
-    if frame.size == 0:
-        raise ConfigurationError(f"Captured frame is empty at {roi_coords}.")
+    try:
+        # 2. Attempt the screenshot
+        screenshot = pyautogui.screenshot(region=roi_coords)
+        if screenshot is None:
+            raise ConfigurationError(f"Failed to capture screenshot at {roi_coords}.")
 
-    # Begin processing
-    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        frame = np.array(screenshot)
+        if frame.size == 0:
+            raise ConfigurationError(f"Captured frame is empty at {roi_coords}.")
 
-    # Perform OCR on the whole 'frame'
-    hd_allowlist = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-&/ "
-    results = reader.readtext(frame, detail=0, paragraph=True, allowlist=hd_allowlist)
+        # Begin processing
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-    # Process Text
-    raw_text = " ".join(results) if results else ""
-    text = raw_text.upper()
+        # Perform OCR on the whole 'frame'
+        hd_allowlist = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-&/ "
+        results = reader.readtext(frame, detail=0, paragraph=True, allowlist=hd_allowlist)
 
-    font_corrections = {
-        "HEAUY": "HEAVY", "ADUANCED": "ADVANCED", "CONCUSSIUE": "CONCUSSIVE",
-        "SERUICE": "SERVICE", "EUAC": "EVAC", "EUIDENCE": "EVIDENCE",
-        "OFFENSIUE": "OFFENSIVE", "DEFENSIUE": "DEFENSIVE", "SERUO": "SERVO"
-    }
+        # Process Text
+        raw_text = " ".join(results) if results else ""
+        text = raw_text.upper()
 
-    for error, correction in font_corrections.items():
-        text = text.replace(error, correction)
+        font_corrections = {
+            "HEAUY": "HEAVY", "ADUANCED": "ADVANCED", "CONCUSSIUE": "CONCUSSIVE",
+            "SERUICE": "SERVICE", "EUAC": "EVAC", "EUIDENCE": "EVIDENCE",
+            "OFFENSIUE": "OFFENSIVE", "DEFENSIUE": "DEFENSIVE", "SERUO": "SERVO"
+        }
 
-    # DEBUG: Save the frame directly.
-    # if save_str:
-    #     print(f"Saving saving debug photo {save_str}.")
-    #     cv2.imwrite(f"debug_ocr_region_{save_str}.png", frame)
+        for error, correction in font_corrections.items():
+            text = text.replace(error, correction)
 
-    return text
+        if roi_overlay:
+            roi_overlay.fade_out()
 
-def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=None):
+        return text
+    finally:
+        # Always close the overlay if something fails
+        if roi_overlay:
+            roi_overlay.fade_out()
+
+def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=None, overlay_tool=None):
     """
     Maps menus with tabs (e.g., Offensive, Defensive).
     Assumes starting at (0,0) in the first category.
@@ -90,7 +97,7 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
 
         # Ensure we are in the right tab
         while cat_counter < len(category_list)*2:
-            current_tab = ocr_from_screen(cat_roi)
+            current_tab = ocr_from_screen(cat_roi, overlay_tool)
             print(f"Have {current_tab} and want {cat_name}")
             if fuzz.partial_ratio(cat_name.upper(), current_tab.upper()) > fuzzy_threshold:
                 cat_counter = -1
@@ -104,12 +111,12 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
             continue
 
         for row in range(35):
-            row_anchor = ocr_from_screen(item_roi)
+            row_anchor = ocr_from_screen(item_roi, overlay_tool)
             col = 0
 
             while True:
-                current_item = ocr_from_screen(item_roi)
-                current_passive = ocr_from_screen(perk_roi) if perk_roi != (0,0,0,0) and perk_roi is not None else None
+                current_item = ocr_from_screen(item_roi, overlay_tool)
+                current_passive = ocr_from_screen(perk_roi, overlay_tool) if perk_roi != (0,0,0,0) and perk_roi is not None else None
                 if current_item and current_item not in master_db:
                     master_db[current_item] = {"cat": cat_name, "pos": [row, col]}
                     # For armor specifically, we will map the passive to make it easier to search through
@@ -122,7 +129,7 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
                 time.sleep(0.5)
 
                 # Have to hardcode the number of columns in the armor table due to the B01s
-                if "B-01" not in row_anchor and fuzz.ratio(row_anchor, ocr_from_screen(item_roi)) > fuzzy_threshold:
+                if "B-01" not in row_anchor and fuzz.ratio(row_anchor, ocr_from_screen(item_roi, overlay_tool)) > fuzzy_threshold:
                     break
                 elif "B-01" in row_anchor and col > 1:
                     break
@@ -132,7 +139,7 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
             time.sleep(0.5)
 
             # Category Change: If 'S' changes the category
-            if fuzz.partial_ratio(cat_name, ocr_from_screen(cat_roi)) < fuzzy_threshold:
+            if fuzz.partial_ratio(cat_name, ocr_from_screen(cat_roi, overlay_tool)) < fuzzy_threshold:
                 print("Category change detected. Mapping complete.")
                 break
 
@@ -141,7 +148,7 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
 
     return True
 
-def map_flat_grid(db_name, item_roi):
+def map_flat_grid(db_name, item_roi, overlay_tool=None):
     """
     Maps single-grid menus.
     Assumes starting at (0,0). Includes Vertical Rollover protection.
@@ -156,15 +163,15 @@ def map_flat_grid(db_name, item_roi):
     focus_hd2_win()
     time.sleep(.5)
 
-    global_anchor = ocr_from_screen(item_roi)
+    global_anchor = ocr_from_screen(item_roi, overlay_tool)
     print(f"Starting Flat Map. Global Anchor: {global_anchor}")
 
     for row in range(35):
-        row_anchor = ocr_from_screen(item_roi)
+        row_anchor = ocr_from_screen(item_roi, overlay_tool)
         col = 0
 
         while True:
-            current_item = ocr_from_screen(item_roi)
+            current_item = ocr_from_screen(item_roi, overlay_tool)
             if current_item and current_item not in master_db:
                 master_db[current_item] = {"pos": [row, col]}
                 print(f"Mapped: {current_item} at {row}, {col}")
@@ -173,7 +180,7 @@ def map_flat_grid(db_name, item_roi):
             time.sleep(0.5)
 
             # Have to hardcode the number of columns in the helmet table due to the B01s
-            if "B-01" not in row_anchor and fuzz.ratio(row_anchor, ocr_from_screen(item_roi)) > fuzzy_threshold:
+            if "B-01" not in row_anchor and fuzz.ratio(row_anchor, ocr_from_screen(item_roi, overlay_tool)) > fuzzy_threshold:
                 break
             elif "B-01" in row_anchor and col > 1:
                 break
@@ -183,7 +190,7 @@ def map_flat_grid(db_name, item_roi):
         time.sleep(0.5)
 
         # Vertical Rollover: Checks if 'S' wrapped us back to the very first item
-        if fuzz.ratio(global_anchor, ocr_from_screen(item_roi)) > fuzzy_threshold:
+        if fuzz.ratio(global_anchor, ocr_from_screen(item_roi, overlay_tool)) > fuzzy_threshold:
             print("Vertical Rollover detected. Mapping complete.")
             break
 
