@@ -1,6 +1,7 @@
 import json
 import os
 from tkinter import messagebox
+from functools import partial
 
 import pygetwindow as gw
 import tkinter as tk
@@ -176,3 +177,59 @@ class ConfigManager:
 
     def get_control(self, key, default=None):
         return str(self.data["controls"].get(key, default))
+
+
+class ROIOverlay:
+    def __init__(self, root_parent: tk.Tk):
+        """
+        Initializes the transparent overlay box.
+        :param root_parent: The main Tkinter root instance.
+        """
+        self.root = tk.Toplevel(root_parent)
+        self.root.overrideredirect(True)
+        self.root.attributes("-topmost", True)
+
+        # 'black' is the designated invisible color
+        self.root.attributes("-transparentcolor", "black")
+        self.root.config(bg="black")
+
+        # Border thickness 2, color bright green (Super Earth approved)
+        self.frame = tk.Frame(
+            self.root,
+            highlightthickness=2,
+            highlightbackground="#00FF00",
+            bg="black"
+        )
+        self.frame.pack(fill="both", expand=True)
+
+        self.root.withdraw()
+
+    def show_at(self, roi_coords: tuple[int, int, int, int]) -> None:
+        """
+        Moves and shows the overlay box.
+        :param roi_coords: A tuple of (left, top, width, height)
+        """
+        left, top, width, height = roi_coords
+
+        # Format for geometry is: "WidthxHeight+Left+Top"
+        self.root.geometry(f"{width}x{height}+{left}+{top}")
+        self.root.deiconify()
+        self.root.lift()
+
+        self.root.update_idletasks()
+
+    def fade_out(self, steps: int = 10, delay: int = 50):
+        """
+        Fades out the overlay window using native Tkinter argument passing.
+        """
+        current_alpha = float(self.root.attributes("-alpha"))
+
+        if current_alpha > 0.0:
+            new_alpha = max(0.0, current_alpha - (1.0 / steps))
+            self.root.attributes("-alpha", new_alpha)
+
+            # Native approach: pass the function name, THEN the arguments
+            self.root.after(delay, self.fade_out, steps, delay)
+        else:
+            self.root.withdraw()
+            self.root.attributes("-alpha", 1.0)

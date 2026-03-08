@@ -14,8 +14,9 @@ from database_mapper import ocr_from_screen, map_categorized_grid, map_flat_grid
 
 
 class LoadoutManager:
-    def __init__(self):
+    def __init__(self, overlay_tool):
         self.config = ConfigManager()
+        self.overlay_tool = overlay_tool
         # Load all your hard-earned JSON databases
         self.dbs = {
             "primary": self._load_json(os.path.join(self.config.basepath,"item_databases","primary_db.json")),
@@ -78,7 +79,7 @@ class LoadoutManager:
         print(f"Aligning Category: Moving to {target_cat}...")
 
         for _ in range(len(category_list) * 2):
-            current_cat_text = ocr_from_screen(cat_roi)
+            current_cat_text = ocr_from_screen(cat_roi, self.overlay_tool)
 
             if fuzz.ratio(target_cat.upper(), current_cat_text.upper()) > 95:
                 print(f"√ Category Confirmed: {target_cat}")
@@ -136,9 +137,9 @@ class LoadoutManager:
 
         # Check if we have categories; if not, call the standard grid mapper
         if cats:
-            success = map_categorized_grid(filename, item_roi, cat_roi, cats, perk_roi)
+            success = map_categorized_grid(filename, item_roi, cat_roi, cats, perk_roi, self.overlay_tool)
         else:
-            success =  map_flat_grid(filename, item_roi)
+            success =  map_flat_grid(filename, item_roi, self.overlay_tool)
         self.update_dbs()
         return success
 
@@ -171,7 +172,7 @@ class LoadoutManager:
 
             # 3. STATE-AWARE POSITION FINDING
             # Read what we are actually hovering over right now
-            current_screen_text = ocr_from_screen(item_roi)
+            current_screen_text = ocr_from_screen(item_roi, self.overlay_tool)
 
             # Reverse lookup: Where are we?
             current_match_key, current_score = self._find_best_match(current_screen_text, list(db.keys()))
@@ -181,7 +182,6 @@ class LoadoutManager:
                 print(f"I am currently at {current_match_key} {self.current_pos}")
             else:
                 # FALLBACK: If we can't identify where we are, bail out
-                ocr_from_screen(cat_roi, f"positioning_alignment_{current_match_key}")
                 retry_counter = retry_counter - 1
                 print(f"Verification failed. {current_match_key} not a valid location. Retry {retry_counter} more times.")
                 continue
@@ -195,7 +195,7 @@ class LoadoutManager:
 
             # 5. FINAL VERIFICATION
             time.sleep(0.3)
-            ver_value = ocr_from_screen(item_roi).upper()
+            ver_value = ocr_from_screen(item_roi, self.overlay_tool).upper()
             if fuzz.partial_ratio(best_match_key.upper(), ver_value) > validation_score:
                 pydirectinput.press(self.config.get_control("ENTER MENU"))
                 return True
@@ -236,7 +236,7 @@ class LoadoutManager:
                 item_roi=item_roi
             )
 
-            occupied = ocr_from_screen(item_roi)
+            occupied = ocr_from_screen(item_roi, self.overlay_tool)
 
             if success and fuzz.ratio(occupied,booster_name) < 75:
                 # If successful, the 'space'/selection was pressed in navigate_to.
@@ -263,7 +263,7 @@ def wait_for_lobby(ready_roi, gui_instance):
 
     while gui_instance.is_watching:
         # Perform the actual screen check
-        text = ocr_from_screen(ready_roi)
+        text = ocr_from_screen(ready_roi, gui_instance.manager.overlay_tool)
 
         if any(word in text for word in ["READY", "UP", "PREPARE"]):
             return True
