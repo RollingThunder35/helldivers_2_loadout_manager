@@ -144,7 +144,7 @@ class LoadoutManager:
         return success
 
     def navigate_to(self, target_name, db_key, item_roi, cat_roi=None, category_list=None, validation_score=75):
-        retry_counter = 2
+        retry_counter = 5
 
         while retry_counter > 0:
             db = self.dbs.get(db_key)
