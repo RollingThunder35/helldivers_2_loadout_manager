@@ -18,16 +18,7 @@ class LoadoutManager:
         self.config = ConfigManager()
         self.overlay_tool = overlay_tool
         # Load all your hard-earned JSON databases
-        self.dbs = {
-            "primary": self._load_json(os.path.join(self.config.basepath,"item_databases","primary_db.json")),
-            "secondary": self._load_json(os.path.join(self.config.basepath,"item_databases","secondary_db.json")),
-            "armor": self._load_json(os.path.join(self.config.basepath,"item_databases","armor_db.json")),
-            "stratagems": self._load_json(os.path.join(self.config.basepath,"item_databases","stratagem_db.json")),
-            "booster": self._load_json(os.path.join(self.config.basepath,"item_databases","booster_db.json")),
-            "helmet": self._load_json(os.path.join(self.config.basepath,"item_databases","helmet_db.json")),
-            "grenade": self._load_json(os.path.join(self.config.basepath,"item_databases","grenade_db.json")),
-            "cape": self._load_json(os.path.join(self.config.basepath,"item_databases","cape_db.json"))
-        }
+        self.update_dbs()
         self.degraded_dbs = set()
         # Track the 'virtual' cursor for each menu
         self.current_pos = [0, 0]
@@ -147,6 +138,8 @@ class LoadoutManager:
         retry_counter = 5
 
         while retry_counter > 0:
+            # Update DBs to prevent bug with data corruption (cause unknown)
+            self.update_dbs()
             db = self.dbs.get(db_key)
             # 1. FIND TARGET DATA (Fuzzy Search)
             best_match_key, match_score = self._find_best_match(target_name, list(db.keys()))
