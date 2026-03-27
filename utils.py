@@ -22,6 +22,8 @@ class ConfigurationError(Exception):
         root = tk.Tk()
         root.withdraw()
         messagebox.showerror("Configuration Error", self.message)
+        print(f"Configuration Error: {self.message}")
+        root.destroy()
         super().__init__(self.message)
 
     pass
