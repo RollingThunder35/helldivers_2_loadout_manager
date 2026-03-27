@@ -57,7 +57,8 @@ def ocr_from_screen(roi_coords, roi_overlay=None):
         font_corrections = {
             "HEAUY": "HEAVY", "ADUANCED": "ADVANCED", "CONCUSSIUE": "CONCUSSIVE",
             "SERUICE": "SERVICE", "EUAC": "EVAC", "EUIDENCE": "EVIDENCE",
-            "OFFENSIUE": "OFFENSIVE", "DEFENSIUE": "DEFENSIVE", "SERUO": "SERVO"
+            "OFFENSIUE": "OFFENSIVE", "DEFENSIUE": "DEFENSIVE", "SERUO": "SERVO",
+            "HOUER": "HOVER"
         }
 
         for error, correction in font_corrections.items():
