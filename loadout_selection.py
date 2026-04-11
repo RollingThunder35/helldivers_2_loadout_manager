@@ -334,7 +334,7 @@ def apply_loadout(manager, loadout, progress_callback=None):
 
         update_progress(40)
         pydirectinput.press(manager.config.get_control("SWITCH", "q"))
-        time.sleep(0.5)
+        time.sleep(manager.config.get_control("CAT SWITCH DELAY", 0.4))
 
         def handle_equipment(target, db_key, item_roi, cat_roi=None, cat_list=None, custom_validation_thresh=None):
             # Inner helper for repetitive equipment navigation

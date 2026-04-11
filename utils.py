@@ -178,7 +178,7 @@ class ConfigManager:
         return tuple(self.data["rois"].get(key, default))
 
     def get_control(self, key, default=None):
-        return str(self.data["controls"].get(key, default))
+        return self.data["controls"].get(key, default)
 
 
 class ROIOverlay:

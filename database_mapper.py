@@ -104,7 +104,7 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
                 cat_counter = -1
                 break
             pydirectinput.press(config.get_control("MENU TAB RIGHT","c"))
-            time.sleep(0.5)
+            time.sleep(config.get_control("CAT SWITCH DELAY",0.4))
             cat_counter += 1
 
         if cat_counter != -1:
@@ -127,7 +127,7 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
                     print(f"[{cat_name}] Mapped: {current_item} at {row}, {col}")
 
                 pydirectinput.press(config.get_control("RIGHT","d"))
-                time.sleep(0.5)
+                time.sleep(config.get_control("OCR READ DELAY", 0.3))
 
                 # Have to hardcode the number of columns in the armor table due to the B01s
                 if "B-01" not in row_anchor and fuzz.ratio(row_anchor, ocr_from_screen(item_roi, overlay_tool)) > fuzzy_threshold:
@@ -137,7 +137,7 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
                 col += 1
 
             pydirectinput.press(config.get_control("DOWN","s"))
-            time.sleep(0.5)
+            time.sleep(config.get_control("OCR READ DELAY", 0.3))
 
             # Category Change: If 'S' changes the category
             if fuzz.partial_ratio(cat_name, ocr_from_screen(cat_roi, overlay_tool)) < fuzzy_threshold:
@@ -162,7 +162,7 @@ def map_flat_grid(db_name, item_roi, overlay_tool=None):
     print(f"\n--- Initializing {db_name} Mapping ---")
     time.sleep(2)
     focus_hd2_win()
-    time.sleep(.5)
+    time.sleep(0.5)
 
     global_anchor = ocr_from_screen(item_roi, overlay_tool)
     print(f"Starting Flat Map. Global Anchor: {global_anchor}")
@@ -178,7 +178,7 @@ def map_flat_grid(db_name, item_roi, overlay_tool=None):
                 print(f"Mapped: {current_item} at {row}, {col}")
 
             pydirectinput.press(config.get_control("RIGHT","d"))
-            time.sleep(0.5)
+            time.sleep(config.get_control("OCR READ DELAY", 0.3))
 
             # Have to hardcode the number of columns in the helmet table due to the B01s
             if "B-01" not in row_anchor and fuzz.ratio(row_anchor, ocr_from_screen(item_roi, overlay_tool)) > fuzzy_threshold:
@@ -188,7 +188,7 @@ def map_flat_grid(db_name, item_roi, overlay_tool=None):
             col += 1
 
         pydirectinput.press(config.get_control("DOWN","s"))
-        time.sleep(0.5)
+        time.sleep(config.get_control("OCR READ DELAY", 0.3))
 
         # Vertical Rollover: Checks if 'S' wrapped us back to the very first item
         if fuzz.ratio(global_anchor, ocr_from_screen(item_roi, overlay_tool)) > fuzzy_threshold:
