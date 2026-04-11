@@ -79,7 +79,7 @@ class LoadoutManager:
                 print(f"Want {target_cat.upper()} but have {current_cat_text.upper()}.")
 
             pydirectinput.press(self.config.get_control("MENU TAB RIGHT","c"))  # Tab Right
-            time.sleep(0.4)
+            time.sleep(self.config.get_control("CAT SWITCH DELAY",0.4))
 
             # Tab switching resets Row to 0, but Column stays!
             self.current_pos[0] = 0
@@ -187,7 +187,7 @@ class LoadoutManager:
             self._move_cursor(delta_row, delta_col)
 
             # 5. FINAL VERIFICATION
-            time.sleep(0.3)
+            time.sleep(self.config.get_control("OCR READ DELAY",0.3))
             ver_value = ocr_from_screen(item_roi, self.overlay_tool).upper()
             if fuzz.partial_ratio(best_match_key.upper(), ver_value) > validation_score:
                 pydirectinput.press(self.config.get_control("ENTER MENU"))
@@ -198,19 +198,19 @@ class LoadoutManager:
         print("All verification failed. Terminating Search...")
         return False
 
-    @staticmethod
-    def _move_cursor(dr, dc):
+
+    def _move_cursor(self, dr, dc):
         # Handle Rows
         row_key = 's' if dr > 0 else 'w'
         for _ in range(abs(dr)):
             pydirectinput.press(row_key)
-            time.sleep(0.1)
+            time.sleep(self.config.get_control("NAV DELAY",0.1))
 
         # Handle Columns
         col_key = 'd' if dc > 0 else 'a'
         for _ in range(abs(dc)):
             pydirectinput.press(col_key)
-            time.sleep(0.1)
+            time.sleep(self.config.get_control("NAV DELAY",0.1))
 
     def apply_booster_priority(self, priority_list, db_key, item_roi):
         """
@@ -241,7 +241,7 @@ class LoadoutManager:
             # Since your navigate_to presses 'escape' on failure, we might need
             # to re-enter the booster menu here if your flow requires it.
             # pydirectinput.press(self.config.get_control("ENTER MENU"))  # Re-open booster menu for next attempt
-            time.sleep(0.3)
+            time.sleep(self.config.get_control("OCR READ DELAY",0.3))
 
         print("CRITICAL: All priority boosters are unavailable.")
         pydirectinput.press('escape')  # Close menu and give up
@@ -294,7 +294,7 @@ def apply_loadout(manager, loadout, progress_callback=None):
         # --- 1. STRATAGEMS (0% -> 25%) ---
         update_progress(10)
         pydirectinput.press(manager.config.get_control("ENTER MENU", "space"))
-        time.sleep(0.3)
+        time.sleep(manager.config.get_control("OCR READ DELAY", 0.3))
 
         for strat_num in range(1, 5):
             strat_key = f"stratagem_{strat_num}"
@@ -315,7 +315,7 @@ def apply_loadout(manager, loadout, progress_callback=None):
         update_progress(30)
         pydirectinput.press(manager.config.get_control("RIGHT", "d"))
         pydirectinput.press(manager.config.get_control("ENTER MENU", "space"))
-        time.sleep(0.3)
+        time.sleep(manager.config.get_control("OCR READ DELAY", 0.3))
 
         if not manager.apply_booster_priority(
                 loadout["boosters"],
@@ -339,7 +339,7 @@ def apply_loadout(manager, loadout, progress_callback=None):
         def handle_equipment(target, db_key, item_roi, cat_roi=None, cat_list=None, custom_validation_thresh=None):
             # Inner helper for repetitive equipment navigation
             pydirectinput.press(manager.config.get_control("ENTER MENU", "space"))
-            time.sleep(0.3)
+            time.sleep(manager.config.get_control("OCR READ DELAY", 0.3))
 
             if custom_validation_thresh:
                 success = manager.navigate_to(target, db_key, item_roi, cat_roi, cat_list, validation_score=custom_validation_thresh)
@@ -348,7 +348,7 @@ def apply_loadout(manager, loadout, progress_callback=None):
 
             # Equipment sub-menus require a manual escape
             pydirectinput.press('escape')
-            time.sleep(0.3)
+            time.sleep(manager.config.get_control("OCR READ DELAY", 0.3))
             if not success:
                 manager.degraded_dbs.add(db_key)
 
