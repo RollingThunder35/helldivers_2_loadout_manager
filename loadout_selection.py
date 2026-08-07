@@ -228,14 +228,30 @@ class LoadoutManager:
                 db_key=db_key,
                 item_roi=item_roi
             )
+            time.sleep(self.config.get_control("OCR READ DELAY", 0.3))
 
-            occupied = ocr_from_screen(item_roi, self.overlay_tool)
+            if success:
+                print(f"Navigation completed.")
 
-            if success and fuzz.ratio(occupied,booster_name) < 75:
-                # If successful, the 'space'/selection was pressed in navigate_to.
-                # We are now kicked back to the main loadout menu.
-                print(f"SUCCESS: {booster_name} equipped.")
-                return True
+            current_selection = ocr_from_screen(item_roi, self.overlay_tool)
+            print(f"Current Selection: {current_selection}")
+
+            if success:
+                menu_still_open: bool = False
+
+                # Check all db keys to ensure that we just didn't fail navigation
+                # Iterate through the dictionary keys to check against known booster names
+                db = self.dbs.get(db_key)
+                for known_booster in db.keys():
+                    if fuzz.ratio(current_selection, known_booster) >= 75:
+                        menu_still_open = True
+                        break
+
+                if not menu_still_open:
+                    # We are now kicked back to the main loadout menu.
+                    print(f"No booster name was found at selection.")
+                    print(f"SUCCESS: {booster_name} equipped.")
+                    return True
 
             print(f"NOTICE: {booster_name} unavailable or navigation failed. Trying next...")
             # Since your navigate_to presses 'escape' on failure, we might need
@@ -244,7 +260,6 @@ class LoadoutManager:
             time.sleep(self.config.get_control("OCR READ DELAY",0.3))
 
         print("CRITICAL: All priority boosters are unavailable.")
-        pydirectinput.press('escape')  # Close menu and give up
         return False
 
 def wait_for_lobby(ready_roi, gui_instance):
