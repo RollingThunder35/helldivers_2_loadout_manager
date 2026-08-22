@@ -9,6 +9,7 @@ import os
 import time
 from thefuzz import fuzz
 from loadout_selection import wait_for_lobby, apply_loadout, LoadoutManager
+from database_mapper import construct_gold_db
 import logging
 
 
@@ -158,8 +159,10 @@ class LoadoutGUI:
             "stratagems": "stratagem_db.json",
             "booster": "booster_db.json"
         }
+
         self.map_buttons = {}
         self.create_mapping_buttons()
+        self.create_gold_database_button()
 
         # --- Footer: Status and Control ---
         # Define the custom "Helldiver" style
@@ -241,7 +244,7 @@ class LoadoutGUI:
         self.refresh_db_button_colors()
 
     def refresh_db_button_colors(self, event=None):
-        db_folder = os.path.join(self.manager.config.basepath,"item_databases")  # Your new subfolder
+        db_folder = os.path.join(self.manager.config.basepath, "item_databases")
         for db_key, filename in self.db_configs.items():
             # Join the path so it checks ./item_databases/primary_db.json
             full_path = os.path.join(db_folder, filename)
@@ -249,6 +252,13 @@ class LoadoutGUI:
             exists = os.path.exists(full_path)
             color = "#27ae60" if exists else "#e74c3c"
             self.map_buttons[db_key].config(bg=color)
+
+        # repeat the same for special case wiki db button
+        if hasattr(self, "gold_db_button"):
+            gold_db_path = os.path.join(db_folder, "gold_wiki_db.json")
+            exists = os.path.exists(gold_db_path)
+            color = "#27ae60" if exists else "#e74c3c"
+            self.gold_db_button.config(bg=color)
 
         if self.manager.degraded_dbs:
             self.handle_degraded_state()
@@ -272,6 +282,36 @@ class LoadoutGUI:
         self.manager.degraded_dbs.discard(db_key) if self.manager.run_mapper_by_key(db_key) else None
         self.root.after(0, self.refresh_db_button_colors, ())
         self.root.after(0, lambda *args: self.status_var.set("STATUS: CALIBRATION COMPLETE"), ())
+
+    # --- Gold Database Methods ---
+    def create_gold_database_button(self):
+        btn = tk.Button(
+            self.right_frame,
+            text="FETCH DATABASE",
+            command=self.start_gold_db,
+            fg="white",
+            font=("Courier", 8, "bold"),
+            width=18
+        )
+        btn.pack(side="bottom", fill="x", pady=(12, 4), padx=10)
+        self.gold_db_button = btn
+        self.refresh_db_button_colors()
+
+    def start_gold_db(self):
+        self.status_var.set("STATUS: FETCHING WIKI DATABASE...")
+        threading.Thread(target=self.run_gold_db_thread, daemon=True).start()
+
+    def run_gold_db_thread(self):
+        try:
+            gold_path = construct_gold_db()
+            if not os.path.exists(gold_path):
+                raise FileNotFoundError(f"Failed to load {gold_path}")
+        except Exception as error:
+            self.root.after(0, lambda: messagebox.showerror("Wiki Database Error", str(error)))
+            self.root.after(0, lambda: self.status_var.set("STATUS: WIKI DATABASE FAILED"))
+            return
+
+        self.root.after(0, lambda: self.status_var.set("STATUS: WIKI DATABASE COMPLETE"))
 
     # --- Loadout Logic Methods ---
     def refresh_loadouts(self, event=None):
