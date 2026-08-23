@@ -740,6 +740,28 @@ class LoadoutGUI:
             except Exception as e:
                 messagebox.showerror("File Error", f"Could not save file: {e}")
 
+        def capture_current_loadout():
+            """Read the equipped items from the game and merge them into this draft."""
+            capture_button.config(state="disabled", text="READING GAME...")
+
+            def read_in_game():
+                try:
+                    captured = self.manager.read_current_loadout()
+                    self.root.after(0, apply_captured_loadout, captured)
+                except Exception as error:
+                    self.root.after(0, lambda: messagebox.showerror("Read Error", str(error)))
+                    self.root.after(0, lambda: capture_button.config(state="normal", text="READ CURRENT LOADOUT"))
+
+            threading.Thread(target=read_in_game, daemon=True).start()
+
+        def apply_captured_loadout(captured):
+            selections.update({key: value for key, value in captured.items() if key not in ("stratagems", "boosters")})
+            selections["stratagems"] = captured["stratagems"]
+            selections["boosters"] = captured["boosters"]
+            update_selection_display()
+            capture_button.config(state="normal", text="READ CURRENT LOADOUT")
+            messagebox.showinfo("Loadout Read", "Current equipment & stratagems added to this loadout.")
+
         # --- CONTROLS ---
         search_entry.bind("<KeyRelease>", update_search)
         cat_var.bind("<<ComboboxSelected>>", update_search)
@@ -749,6 +771,9 @@ class LoadoutGUI:
 
         tk.Button(btn_frame, text="ADD ITEM", width=15, bg="#3498db", fg="white", command=add_item).pack(side="left",
                                                                                                          padx=5)
+        capture_button = tk.Button(btn_frame, text="READ CURRENT LOADOUT", width=22, bg="#9b59b6", fg="white",
+                                   command=capture_current_loadout)
+        capture_button.pack(side="left", padx=5)
         tk.Button(btn_frame, text="SAVE & VALIDATE", width=15, bg="#2ecc71", fg="white", command=save_loadout).pack(
             side="left", padx=5)
 

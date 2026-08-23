@@ -212,6 +212,63 @@ class LoadoutManager:
             pydirectinput.press(col_key)
             time.sleep(self.config.get_control("NAV DELAY",0.1))
 
+    def read_current_loadout(self):
+        """Read the current, fully equipped loadout from the mission loadout screen."""
+        focus_hd2_win()
+        enter_key = self.config.get_control("ENTER MENU", "space")
+        escape_key = self.config.get_control("ESCAPE", "escape")
+        left_key = self.config.get_control("LEFT", "a")
+        right_key = self.config.get_control("RIGHT", "d")
+        down_key = self.config.get_control("DOWN", "s")
+        switch_key = self.config.get_control("SWITCH", "r")
+        read_delay = self.config.get_control("OCR READ DELAY", 0.3)
+
+        def read_item(roi_key):
+            time.sleep(read_delay)
+            return ocr_from_screen(self.config.get_roi(roi_key, (0, 0, 0, 0)), self.overlay_tool)
+
+        loadout = {"stratagems": [], "boosters": []}
+
+        # Read 4 stratagems; if no stratagem is selected, it defaults to the first available
+        for strat_num in range(1, 5):
+            pydirectinput.press(enter_key)
+            loadout["stratagems"].append(read_item("STRAT_ITEM_ROI"))
+            pydirectinput.press(escape_key)
+            if strat_num < 4:
+                pydirectinput.press(right_key)
+
+        # Read in the booster next to stratagems
+        # TODO: THIS CURRENTLY DEFAULTS TO 'NO BOOSTER'
+        pydirectinput.press(right_key)
+        pydirectinput.press(enter_key)
+        loadout["boosters"].append(read_item("BOOSTER_ITEM_ROI"))
+        pydirectinput.press(escape_key)
+
+        # Switch to equipment. The selected slot starts at helmet.
+        pydirectinput.press(switch_key)
+        equipment = (
+            ("armor", "ARMOR_ITEM_ROI"),
+            ("helmet", "HELMET_ITEM_ROI"),
+            ("cape", "CAPE_ITEM_ROI"),
+            ("grenade", "GRENADE_ITEM_ROI"),
+            ("secondary", "SECONDARY_ITEM_ROI"),
+            ("primary", "PRIMARY_ITEM_ROI")
+        )
+
+        for index, (loadout_key, roi_key) in enumerate(equipment):
+            pydirectinput.press(enter_key)
+            loadout[loadout_key] = read_item(roi_key)
+            pydirectinput.press(escape_key)
+
+            if index in (0, 1):
+                pydirectinput.press(right_key)
+            elif index == 2:
+                pydirectinput.press(down_key)
+            elif index in (3, 4):
+                pydirectinput.press(left_key)
+
+        return loadout
+
     def apply_booster_priority(self, priority_list, db_key, item_roi):
         """
         Iterates through priorities. If navigate_to fails (Verification Mismatch),
