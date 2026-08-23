@@ -9,6 +9,8 @@ import os
 import time
 from thefuzz import fuzz
 from loadout_selection import wait_for_lobby, apply_loadout, LoadoutManager
+from database_mapper import construct_gold_db
+from loadout_creator import LoadoutCreator
 import logging
 
 
@@ -158,8 +160,10 @@ class LoadoutGUI:
             "stratagems": "stratagem_db.json",
             "booster": "booster_db.json"
         }
+
         self.map_buttons = {}
         self.create_mapping_buttons()
+        self.create_gold_database_button()
 
         # --- Footer: Status and Control ---
         # Define the custom "Helldiver" style
@@ -241,7 +245,7 @@ class LoadoutGUI:
         self.refresh_db_button_colors()
 
     def refresh_db_button_colors(self, event=None):
-        db_folder = os.path.join(self.manager.config.basepath,"item_databases")  # Your new subfolder
+        db_folder = os.path.join(self.manager.config.basepath, "item_databases")
         for db_key, filename in self.db_configs.items():
             # Join the path so it checks ./item_databases/primary_db.json
             full_path = os.path.join(db_folder, filename)
@@ -249,6 +253,13 @@ class LoadoutGUI:
             exists = os.path.exists(full_path)
             color = "#27ae60" if exists else "#e74c3c"
             self.map_buttons[db_key].config(bg=color)
+
+        # repeat the same for special case wiki db button
+        if hasattr(self, "gold_db_button"):
+            gold_db_path = os.path.join(db_folder, "gold_wiki_db.json")
+            exists = os.path.exists(gold_db_path)
+            color = "#27ae60" if exists else "#e74c3c"
+            self.gold_db_button.config(bg=color)
 
         if self.manager.degraded_dbs:
             self.handle_degraded_state()
@@ -272,6 +283,36 @@ class LoadoutGUI:
         self.manager.degraded_dbs.discard(db_key) if self.manager.run_mapper_by_key(db_key) else None
         self.root.after(0, self.refresh_db_button_colors, ())
         self.root.after(0, lambda *args: self.status_var.set("STATUS: CALIBRATION COMPLETE"), ())
+
+    # --- Gold Database Methods ---
+    def create_gold_database_button(self):
+        btn = tk.Button(
+            self.right_frame,
+            text="FETCH DATABASE",
+            command=self.start_gold_db,
+            fg="white",
+            font=("Courier", 8, "bold"),
+            width=18
+        )
+        btn.pack(side="bottom", fill="x", pady=(12, 4), padx=10)
+        self.gold_db_button = btn
+        self.refresh_db_button_colors()
+
+    def start_gold_db(self):
+        self.status_var.set("STATUS: FETCHING WIKI DATABASE...")
+        threading.Thread(target=self.run_gold_db_thread, daemon=True).start()
+
+    def run_gold_db_thread(self):
+        try:
+            gold_path = construct_gold_db()
+            if not os.path.exists(gold_path):
+                raise FileNotFoundError(f"Failed to load {gold_path}")
+        except Exception as error:
+            self.root.after(0, lambda: messagebox.showerror("Wiki Database Error", str(error)))
+            self.root.after(0, lambda: self.status_var.set("STATUS: WIKI DATABASE FAILED"))
+            return
+
+        self.root.after(0, lambda: self.status_var.set("STATUS: WIKI DATABASE COMPLETE"))
 
     # --- Loadout Logic Methods ---
     def refresh_loadouts(self, event=None):
@@ -467,250 +508,7 @@ class LoadoutGUI:
         return ["ALL"] + sorted(list(unique_factions))
 
     def open_loadout_creator(self, edit_data=None):
-        creator = tk.Toplevel(self.root)
-        creator.title("EDIT LOADOUT" if edit_data else "LOADOUT ARCHITECT")
-        creator.geometry("600x900")
-        creator.configure(bg="#1a1a1a")  # Deep charcoal/black
-
-        # Local storage for this session
-        selections = {}
-
-        # Track UI variables
-        draft_name = tk.StringVar(value="New Loadout")
-        draft_factions = tk.StringVar(value="TERMINIDS")
-
-        # --- PRE-FILL LOGIC ---
-        if edit_data:
-            # IN case the input is the file name rather than the actual contained data
-            if isinstance(edit_data, str):
-                with open(edit_data, 'r') as f:
-                    edit_data = json.load(f)
-            # Fill the Entry widgets
-            draft_name.set(edit_data.get("name", ""))
-            draft_factions.set(", ".join(edit_data.get("factions", [])))
-
-            # Map existing numbered stratagems back into the 'stratagems' list
-            strat_list = []
-            for i in range(1, 5):
-                s_key = f"stratagem_{i}"
-                if s_key in edit_data:
-                    strat_list.append(edit_data[s_key])
-
-            if strat_list:
-                selections["stratagems"] = strat_list
-
-            # Add boosters and other items to the internal dictionary
-            for k, v in edit_data.items():
-                if k not in ["name", "factions", "stratagem_1", "stratagem_2", "stratagem_3", "stratagem_4"]:
-                    selections[k] = v
-
-        # --- HEADER ---
-        tk.Label(creator, text="LOADOUT NAME:", bg="#1a1a1a", fg="#ffe81f", font=("Courier", 10, "bold")).pack(
-            pady=(10, 0))
-        tk.Entry(creator, textvariable=draft_name, bg="#2a2a2a", fg="white", insertbackground="white").pack(fill="x",
-                                                                                                            padx=40,
-                                                                                                            pady=5)
-
-        tk.Label(creator, text="FACTIONS (Comma Separated):", bg="#1a1a1a", fg="#ffe81f",
-                 font=("Courier", 10, "bold")).pack(pady=(10, 0))
-        tk.Entry(creator, textvariable=draft_factions, bg="#2a2a2a", fg="white", insertbackground="white").pack(
-            fill="x", padx=40, pady=5)
-
-        # --- CATEGORY SELECTION ---
-        tk.Label(creator, text="1. SELECT CATEGORY", bg="#1a1a1a", fg="white", font=("Courier", 10, "bold")).pack(
-            pady=(15, 0))
-
-        cat_options = list(self.manager.dbs.keys())
-        # The widget will automatically pick up the "TCombobox" style defined above
-        cat_var = ttk.Combobox(creator, values=cat_options, state="readonly")
-        cat_var.pack(fill="x", padx=40, pady=5)
-
-        # --- SEARCH & RESULTS ---
-        tk.Label(creator, text="2. SEARCH & SELECT ITEM", bg="#1a1a1a", fg="white").pack(pady=(10, 0))
-        search_entry = tk.Entry(creator, bg="#2a2a2a", fg="white", insertbackground="white")
-        search_entry.pack(fill="x", padx=40, pady=5)
-
-        results_list = tk.Listbox(creator, bg="#000000", fg="#2ecc71", selectbackground="#333", font=("Consolas", 10))
-        results_list.pack(fill="both", expand=True, padx=40, pady=10)
-        results_list.bind("<<ListboxSelect>>", lambda e: update_selection_display())
-
-        # --- CURRENT STATUS DISPLAY ---
-        status_frame = tk.LabelFrame(creator, text="CURRENT SELECTIONS", bg="#1a1a1a", fg="#ffe81f", padx=10, pady=10)
-        status_frame.pack(fill="x", padx=20, pady=5)
-        selection_display = tk.Label(status_frame, text="Empty Loadout", justify="left", bg="#1a1a1a", fg="#aaa",
-                                     font=("Courier", 8))
-        selection_display.pack()
-        self.manager.update_dbs()
-
-        # --- INNER LOGIC FUNCTIONS ---
-        def update_search(event=None):
-            query = search_entry.get().upper()
-            db_key = cat_var.get()
-            results_list.delete(0, tk.END)
-
-            # Determine which database to look in
-            search_db = "stratagems" if "stratagem_" in db_key else db_key
-
-            if search_db in self.manager.dbs:
-                db_content = self.manager.dbs[search_db]
-                matches = []
-
-                for item_name, details in db_content.items():
-                    # Default text for display
-                    display_text = item_name
-                    search_haystack = item_name.upper()
-
-                    # --- ARMOR SPECIAL HANDLING ---
-                    # If it's armor, append the metadata for searching and display
-                    if search_db == "armor" and isinstance(details, dict):
-                        passive = details.get("passive", "UNKNOWN").upper()
-                        armor_type = details.get("cat", "").upper()  # e.g., Light, Medium, Heavy
-
-                        # Format: NAME (TYPE PASSIVE)
-                        display_text = f"{item_name} ({armor_type} {passive})"
-                        search_haystack = display_text.upper()
-
-                    # --- FUZZY MATCHING ---
-                    # We search against the full haystack (Name + Passive)
-                    score = fuzz.partial_ratio(query, search_haystack)
-
-                    if query == "" or score > 70:
-                        matches.append((display_text, score))
-
-                # Sort by highest score, then alphabetically
-                matches.sort(key=lambda x: (-x[1], x[0]))
-
-                for text, score in matches:
-                    results_list.insert(tk.END, text)
-
-        def update_selection_display():
-            """Formats the dictionary into a readable manifest with counters."""
-            summary = []
-
-            # Sort keys to keep the list organized
-            for sel_keys in sorted(selections.keys()):
-                val = selections[sel_keys]
-
-                # 1. If the value is a LIST (Boosters or Stratagems)
-                if isinstance(val, list):
-                    count = len(val)
-                    # This only joins if it's a list of strings
-                    items_str = ", ".join(val)
-                    summary.append(f"{sel_keys.upper()} ({count}/4): {items_str}")
-
-                # 2. If the value is a STRING (Armor, Primary, etc.)
-                else:
-                    summary.append(f"{sel_keys.upper()}: {val}")
-
-            display_text = "\n".join(summary) if summary else "Empty Loadout"
-            selection_display.config(text=display_text, fg="#2ecc71")
-
-        def add_item():
-            category = cat_var.get()
-            selection_idx = results_list.curselection()
-
-            if not category or not selection_idx:
-                return
-
-            selection = results_list.get(selection_idx)
-
-            # Standardize the key (Boosters/Stratagems)
-            list_key = "boosters" if category == "booster" else "stratagems" if category == "stratagem" else category
-
-            # Logic for List-based selections
-            if list_key in ["stratagems", "boosters"]:
-                if list_key not in selections:
-                    selections[list_key] = []
-
-                if selection in selections[list_key]:
-                    messagebox.showinfo("Note", f"This {category} is already selected.")
-                    return
-
-                if len(selections[list_key]) >= 4:
-                    # Trigger the Swap Dialog instead of showing a warning
-                    open_swap_dialog(list_key, selection)
-                else:
-                    selections[list_key].append(selection)
-                    update_selection_display()
-
-            # Logic for Single-slot selections
-            else:
-                selections[category] = selection
-                update_selection_display()
-
-        def open_swap_dialog(list_key, new_item):
-            """Creates a popup to let the user choose which item to replace."""
-            swap_win = tk.Toplevel(creator)
-            swap_win.title("SLOT LIMIT REACHED")
-            swap_win.geometry("400x300")
-            swap_win.grab_set()  # Forces user to interact with this window
-
-            tk.Label(swap_win, text=f"Select an item to replace with:\n{new_item}",
-                     pady=10, font=("Courier", 10, "bold")).pack()
-
-            def replace(rep_index):
-                selections[list_key][rep_index] = new_item
-                update_selection_display()
-                swap_win.destroy()
-
-            # Create a button for each currently equipped item
-            for index, current_item in enumerate(selections[list_key]):
-                btn_text = f"REPLACE: {current_item}"
-                tk.Button(swap_win, text=btn_text, width=40, pady=5,
-                          command=lambda idx=index: replace(idx)).pack(pady=2)
-
-            tk.Button(swap_win, text="CANCEL", command=swap_win.destroy, fg="red").pack(pady=10)
-
-        def save_loadout():
-            # Create a copy to avoid messing with the live draft
-            data_to_save = {
-                "name": draft_name.get(),
-                "factions": [faction_name.strip().upper() for faction_name in draft_factions.get().split(",") if faction_name.strip()],
-                **{key: values for key, values in selections.items() if key != "stratagems"}  # Copy everything except the list
-            }
-
-            # Convert the 'stratagems' list back to 'stratagem_1', etc. for the automation script
-            if "stratagems" in selections:
-                for idx, strat in enumerate(selections["stratagems"], 1):
-                    data_to_save[f"stratagem_{idx}"] = strat
-
-            # Validate using your shared function
-            is_valid, error_msg = validate_loadout_data(data_to_save)
-
-            if not is_valid:
-                messagebox.showerror("Validation Failed", error_msg)
-                return
-
-            if edit_data and draft_name.get() == edit_data['name']:
-                # If the name is the same, we are overwriting
-                confirm = messagebox.askyesno("Confirm", f"Overwrite existing loadout '{draft_name.get()}'?")
-                if not confirm: return
-
-            # Success path
-            clean_filename = "".join(c for c in data_to_save["name"].lower() if c.isalnum() or c in (' ', '_')).replace(' ',
-                                                                                                              '_').lower()
-            save_path = os.path.join(self.manager.config.basepath,"loadouts", f"{clean_filename}.json")
-
-            try:
-                with open(save_path, 'w') as file:
-                    json.dump(data_to_save, file, indent=4)
-                messagebox.showinfo("Success", f"Loadout '{data_to_save['name']}' saved!")
-                creator.destroy()
-                self.refresh_loadouts()  # Update main GUI list
-            except Exception as e:
-                messagebox.showerror("File Error", f"Could not save file: {e}")
-
-        # --- CONTROLS ---
-        search_entry.bind("<KeyRelease>", update_search)
-        cat_var.bind("<<ComboboxSelected>>", update_search)
-
-        btn_frame = tk.Frame(creator, bg="#1a1a1a")
-        btn_frame.pack(pady=20)
-
-        tk.Button(btn_frame, text="ADD ITEM", width=15, bg="#3498db", fg="white", command=add_item).pack(side="left",
-                                                                                                         padx=5)
-        tk.Button(btn_frame, text="SAVE & VALIDATE", width=15, bg="#2ecc71", fg="white", command=save_loadout).pack(
-            side="left", padx=5)
+        LoadoutCreator(self.root, self.manager, self.refresh_loadouts, edit_data)
 
 def patched_print(*args, **kwargs):
     """Overrides the built-in print to use logging instead."""
