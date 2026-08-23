@@ -247,8 +247,8 @@ class LoadoutManager:
         # Switch to equipment. The selected slot starts at helmet.
         pydirectinput.press(switch_key)
         equipment = (
-            ("armor", "ARMOR_ITEM_ROI"),
             ("helmet", "HELMET_ITEM_ROI"),
+            ("armor", "ARMOR_ITEM_ROI"),
             ("cape", "CAPE_ITEM_ROI"),
             ("grenade", "GRENADE_ITEM_ROI"),
             ("secondary", "SECONDARY_ITEM_ROI"),
