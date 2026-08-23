@@ -257,7 +257,10 @@ class LoadoutManager:
 
         for index, (loadout_key, roi_key) in enumerate(equipment):
             pydirectinput.press(enter_key)
-            loadout[loadout_key] = read_item(roi_key)
+            if loadout_key == "armor":
+                loadout[loadout_key] = f"{read_item(roi_key)} ({read_item('ARMOR_CAT_ROI')} {read_item('ARMOR_PERK_ROI')})"
+            else:
+                loadout[loadout_key] = read_item(roi_key)
             pydirectinput.press(escape_key)
 
             if index in (0, 1):
