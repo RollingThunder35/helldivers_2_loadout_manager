@@ -135,6 +135,18 @@ class LoadoutGUI:
         )
         self.edit_btn.pack(fill="x", pady=5)
 
+        self.delete_btn = tk.Button(
+            self.left_frame,
+            text="🗑 DELETE SELECTED",
+            bg="#333333",
+            fg="#e74c3c",
+            font=("Courier", 8),
+            command=self.delete_loadout,
+            bd=0,
+            pady=5
+        )
+        self.delete_btn.pack(fill="x", pady=5)
+
         # 2. MIDDLE COLUMN: Manifest Preview
         self.mid_frame = tk.LabelFrame(self.main_container, text=" MANIFEST PREVIEW ",
                                        bg="#1a1a1a", fg="#ffe81f", font=("Courier", 10, "bold"))
@@ -233,6 +245,30 @@ class LoadoutGUI:
         if loadout_data:
             # Re-use the creator but pass the data
             self.open_loadout_creator(edit_data=loadout_data)
+        else:
+            messagebox.showerror("Edit Error", "The selected loadout file could not be found.")
+
+    def delete_loadout(self):
+        selection = self.loadout_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("Delete", "Please select a loadout to delete first.")
+            return
+
+        loadout_name = self.loadout_listbox.get(selection[0])
+        loadout_path = self.loadout_map.get(loadout_name)
+        if not loadout_path:
+            messagebox.showerror("Delete Error", "The selected loadout file could not be found.")
+            return
+
+        if messagebox.askyesno("Delete Loadout", f"Are you sure you want to delete loadout '{loadout_name}'?", parent=self.root):
+            try:
+                os.remove(loadout_path)
+                self.current_loadout_data = None
+                self.refresh_loadouts()
+                self.reset_ui()
+                messagebox.showinfo("Loadout Deleted", f"Loadout '{loadout_name}' deleted.", parent=self.root)
+            except OSError as error:
+                messagebox.showerror("Delete Error", f"Could not delete loadout: {error}", parent=self.root)
 
     # --- Mapping Panel Methods ---
     def create_mapping_buttons(self):
