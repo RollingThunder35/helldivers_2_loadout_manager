@@ -24,13 +24,10 @@ jobs:
           python-version: '3.12'
 
       - name: Install Dependencies and Rebuild Bootloader
-        env:
-          PYINSTALLER_COMPILE_BOOTLOADER: 1
         run: |
           python -m pip install --upgrade pip
           pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
-          pip install --no-binary=pyinstaller --force-reinstall pyinstaller
 
       - name: Build Manager and Wizard
         run: |
@@ -40,8 +37,8 @@ jobs:
       - name: Scan Executables with Windows Defender
         shell: cmd
         run: |
-          "C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "%CD%\dist\SEAF_Loadout_Manager" || exit /b 1
-          "C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "%CD%\dist\SEAF_Setup_Wizard" || exit /b 1
+          "C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "%CD%\build\SEAF_Loadout_Manager" || exit /b 1
+          "C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "%CD%\build\SEAF_Setup_Wizard" || exit /b 1
 
       - name: Extract Changelog Message
         id: changelog
@@ -72,7 +69,8 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@main
+
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
@@ -90,7 +88,7 @@ jobs:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
           mod_id: ${{ secrets.NEXUS_MOD_ID }}
           file_id: ${{ secrets.NEXUS_MANAGER_FILE_ID }}
-          filename: dist/SEAF_Loadout_Manager.zip
+          filename: SEAF_Loadout_Manager
           version: ${{ github.ref_name }}
           changelog: ${{ steps.changelog.outputs.message }}
 
@@ -101,6 +99,6 @@ jobs:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
           mod_id: ${{ secrets.NEXUS_MOD_ID }}
           file_id: ${{ secrets.NEXUS_WIZARD_FILE_ID }}
-          filename: dist/SEAF_Setup_Wizard.zip
+          filename: SEAF_Setup_Wizard
           version: ${{ github.ref_name }}
           changelog: ${{ steps.changelog.outputs.message }}
