@@ -84,7 +84,7 @@ jobs:
           prerelease: false
 
       - name: Upload Manager to Nexus Mods
-        uses: Nexus-Mods/upload-action@v1
+        uses: Nexus-Mods/upload-action@main
         if: steps.create_release.conclusion == 'success'
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
@@ -95,7 +95,7 @@ jobs:
           changelog: ${{ steps.changelog.outputs.message }}
 
       - name: Upload Wizard to Nexus Mods
-        uses: Nexus-Mods/upload-action@v1
+        uses: Nexus-Mods/upload-action@main
         if: steps.create_release.conclusion == 'success'
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
