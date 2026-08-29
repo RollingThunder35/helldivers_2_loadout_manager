@@ -64,12 +64,12 @@ jobs:
 
       - name: Zip Manager Folder
         run: |
-          Compress-Archive -Path dist/SEAF_Loadout_Manager -DestinationPath dist/SEAF_Loadout_Manager.zip
-          Compress-Archive -Path dist/SEAF_Setup_Wizard -DestinationPath dist/SEAF_Setup_Wizard.zip
+          Compress-Archive -Path build/SEAF_Loadout_Manager -DestinationPath build/SEAF_Loadout_Manager.zip
+          Compress-Archive -Path build/SEAF_Setup_Wizard -DestinationPath build/SEAF_Setup_Wizard.zip
 
       - name: Create GitHub Release
         id: create_release
-        uses: softprops/action-gh-release@main
+        uses: softprops/action-gh-release@v2
 
         if: startsWith(github.ref, 'refs/tags/')
         with:
