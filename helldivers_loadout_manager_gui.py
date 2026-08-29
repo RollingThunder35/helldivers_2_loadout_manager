@@ -402,7 +402,7 @@ class LoadoutGUI:
 
             # Build manifest
             manifest = f"--- {data.get("name").upper()} ---\n\n"
-            for cat in ["primary", "secondary", "grenade", "armor", "helmet"]:
+            for cat in ["primary", "secondary", "grenade", "armor", "helmet", "cape"]:
                 if cat in data:
                     item_val = data[cat].replace("\n", "").strip()
                     manifest += f"{cat.upper():<10}: {item_val}\n"
