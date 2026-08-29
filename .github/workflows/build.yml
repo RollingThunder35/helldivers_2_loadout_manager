@@ -23,15 +23,18 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install Dependencies and Rebuild Bootloader
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
 
-      - name: Build Manager and Wizard
+      - name: Build Manager
         run: |
           python build_manager.py
+
+      - name: Build Wizard
+        run: |
           python build_wizard.py
 
       - name: Scan Executables with Windows Defender
@@ -69,13 +72,13 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
 
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            dist/SEAF_Loadout_Manager.zip
-            dist/SEAF_Setup_Wizard.zip
+            build/SEAF_Loadout_Manager.zip
+            build/SEAF_Setup_Wizard.zip
           name: Release ${{ github.ref_name }}
           body: ${{ steps.changelog.outputs.message }}
           draft: false

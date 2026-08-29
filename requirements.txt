@@ -8,3 +8,4 @@ pygetwindow
 requests
 nuitka
 zstandard
+ordered-set
