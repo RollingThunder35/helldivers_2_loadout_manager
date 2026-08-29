@@ -6,3 +6,4 @@ pyinstaller
 thefuzz
 numpy
 pygetwindow
+requests
