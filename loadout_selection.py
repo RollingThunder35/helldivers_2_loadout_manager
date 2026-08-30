@@ -364,12 +364,32 @@ def apply_loadout(manager, loadout, progress_callback=None):
         print(f"Loading Helldivers 2 loadout: {loadout["name"]}...")
         update_progress(5)
         # Ensure focus_hd2_win() is imported/defined in your scope
-        focus_hd2_win()
+        if not focus_hd2_win():
+            print("ERROR: Could not focus Helldivers 2. Aborting loadout application.")
+            update_progress(0)
+            return
 
         # --- 1. STRATAGEMS (0% -> 25%) ---
         update_progress(10)
-        pydirectinput.press(manager.config.get_control("ENTER MENU", "space"))
-        time.sleep(manager.config.get_control("OCR READ DELAY", 0.3))
+
+        # Confirm the stratagem menu actually opened before proceeding.
+        # This ENTER MENU press previously had no verification, so if it
+        # missed (window not focused yet, game not ready) every OCR read
+        # for the rest of the run sampled a screen that never changed --
+        # every category/item check would just come back blank.
+        strat_cat_roi = manager.config.get_roi("STRAT_CAT_ROI", (0, 0, 0, 0))
+        menu_open = False
+        for _ in range(5):
+            pydirectinput.press(manager.config.get_control("ENTER MENU", "space"))
+            time.sleep(manager.config.get_control("OCR READ DELAY", 0.3))
+            if ocr_from_screen(strat_cat_roi, manager.overlay_tool).strip():
+                menu_open = True
+                break
+
+        if not menu_open:
+            print("ERROR: Stratagem menu did not open. Aborting loadout application.")
+            update_progress(0)
+            return
 
         for strat_num in range(1, 5):
             strat_key = f"stratagem_{strat_num}"
