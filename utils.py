@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from tkinter import messagebox
 from functools import partial
 
@@ -28,19 +29,44 @@ class ConfigurationError(Exception):
 
     pass
 
-def focus_hd2_win():
+def focus_hd2_win(max_attempts=5, retry_delay=0.3):
+    """
+    Focuses the Helldivers 2 window and confirms the OS actually handed
+    over focus before returning.
+
+    win.activate() wraps Windows' SetForegroundWindow, which the OS is
+    free to silently ignore (it can refuse a background process's focus
+    request), and it can also raise PyGetWindowException outright. This
+    previously returned unconditionally either way, so a failed focus
+    request left every subsequent keypress and OCR read operating on
+    whatever window/screen actually had focus instead of the game.
+
+    Returns True once win.isActive is confirmed, False if the window
+    couldn't be found or focus couldn't be confirmed after max_attempts.
+    """
     print("Switching to Helldivers 2...")
 
-    # Search for any window containing "Google Chrome"
     matches = gw.getWindowsWithTitle('HELLDIVERS™ 2')
-
-    if matches:
-        win = matches[0]  # Get the first match
-        if win.isMinimized:
-            win.restore()  # Restore if it's tucked away in the taskbar
-        win.activate()
-    else:
+    if not matches:
         print("No matching window found.")
+        return False
+
+    win = matches[0]  # Get the first match
+    for attempt in range(max_attempts):
+        try:
+            if win.isMinimized:
+                win.restore()  # Restore if it's tucked away in the taskbar
+            win.activate()
+        except Exception as e:
+            print(f"Focus attempt {attempt + 1}/{max_attempts} failed: {e}")
+
+        if win.isActive:
+            return True
+
+        time.sleep(retry_delay)
+
+    print(f"WARNING: Could not confirm Helldivers 2 focus after {max_attempts} attempts.")
+    return False
 
 
 def validate_loadout_files(loadout_folder):
