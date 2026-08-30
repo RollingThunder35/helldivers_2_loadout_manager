@@ -19,6 +19,10 @@ def run_build() -> None:
     if TARGET_DIR.exists():
         shutil.rmtree(TARGET_DIR)
 
+    # Detect if running inside GitHub Actions runner
+    is_ci: bool = os.getenv("GITHUB_ACTIONS") == "true"
+    job_count: int = 2 if is_ci else 6
+
     command: list[str] = [
         sys.executable,
         '-m',
@@ -31,7 +35,7 @@ def run_build() -> None:
         '--enable-plugin=anti-bloat',
         '--module-parameter=torch-disable-jit=yes',
         '--low-memory',
-        '--jobs=8',
+        f'--jobs={job_count}',
         '--show-progress',
         f'--windows-icon-from-ico={BASE_DIR / "helldivers_super_earth_logo.ico"}',
         f'--output-dir={BUILD_DIR}',

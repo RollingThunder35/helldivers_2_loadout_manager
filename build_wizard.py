@@ -19,6 +19,10 @@ def run_build() -> None:
     if TARGET_DIR.exists():
         shutil.rmtree(TARGET_DIR)
 
+    # Detect if running inside GitHub Actions runner
+    is_ci: bool = os.getenv("GITHUB_ACTIONS") == "true"
+    job_count: int = 2 if is_ci else 6
+
     command: list[str] = [
         sys.executable,
         '-m',
@@ -30,31 +34,8 @@ def run_build() -> None:
         '--enable-plugin=tk-inter',
         '--enable-plugin=anti-bloat',
         '--module-parameter=torch-disable-jit=yes',
-        # Exclude heavy SciPy submodules
-        '--nofollow-import-to=scipy.stats',
-        '--nofollow-import-to=scipy.optimize',
-        '--nofollow-import-to=scipy.signal',
-        '--nofollow-import-to=scipy.integrate',
-        '--nofollow-import-to=scipy.fft',
-        '--nofollow-import-to=scipy.interpolate',
-        '--nofollow-import-to=scipy.cluster',
-        '--nofollow-import-to=scipy.io',
-        '--nofollow-import-to=scipy.sparse',
-        '--nofollow-import-to=scipy.special',
-        # Exclude unused PyTorch sub-frameworks
-        '--nofollow-import-to=torch.testing',
-        '--nofollow-import-to=torch.distributed',
-        '--nofollow-import-to=torch.utils.tensorboard',
-        '--nofollow-import-to=torch.onnx',
-        '--nofollow-import-to=torch.cuda',
-        # Exclude Heavy PyTorch dependencies
-        '--nofollow-import-to=sympy',
-        # Exclude visualization & test suites pulled in by easyocr/opencv
-        '--nofollow-import-to=matplotlib',
-        '--nofollow-import-to=unittest',
-        '--nofollow-import-to=doctest',
         '--low-memory',
-        '--jobs=4',
+        f'--jobs={job_count}',
         '--show-progress',
         f'--windows-icon-from-ico={BASE_DIR / "helldivers_super_earth_logo.ico"}',
         f'--output-dir={BUILD_DIR}',
