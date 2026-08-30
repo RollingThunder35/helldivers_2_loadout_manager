@@ -32,9 +32,12 @@ jobs:
           pip install -r requirements.txt
           pip install --no-binary=pyinstaller --force-reinstall pyinstaller
 
-      - name: Build Manager and Wizard
+      - name: Build Manager
         run: |
           python build_manager.py
+
+      - name: Build Wizard
+        run: |
           python build_wizard.py
 
       - name: Scan Executables with Windows Defender
@@ -72,7 +75,7 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
