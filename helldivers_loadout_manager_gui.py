@@ -1,5 +1,5 @@
 import environment_setup
-from utils import focus_hd2_win, validate_loadout_files, validate_loadout_data, ConfigurationError, ROIOverlay
+from utils import FACTION_LIST, focus_hd2_win, validate_loadout_files, validate_loadout_data, ConfigurationError, ROIOverlay
 import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -489,6 +489,13 @@ class LoadoutGUI:
 
             # Build manifest
             manifest = f"--- {data.get("name").upper()} ---\n\n"
+            factions = data.get("factions")
+            if factions:
+                manifest += "FACTIONS:\n"
+                manifest += ", ".join(str(f).upper() for f in factions) + "\n\n"
+            else:
+                manifest += "FACTIONS:\nN/A\n\n"
+
             for cat in ["primary", "secondary", "grenade", "armor", "helmet", "cape"]:
                 if cat in data:
                     item_val = data[cat].replace("\n", "").strip()
@@ -608,24 +615,22 @@ class LoadoutGUI:
         self.manager.required_only = False
 
     def get_unique_factions(self):
-        """Scans all JSON files to find every unique faction tag."""
-        unique_factions = set()  # Use a set to prevent duplicates
+        """Return built-in factions together with user-defined faction tags."""
+        unique_factions = set(FACTION_LIST)  # Start with the built-in factions
         loadout_folder = os.path.join(self.manager.config.basepath, "loadouts")
 
-        if not os.path.exists(loadout_folder):
-            return ["ALL"]
-
-        for filename in os.listdir(loadout_folder):
-            if filename.endswith(".json"):
-                try:
-                    with open(os.path.join(loadout_folder, filename), 'r') as f:
-                        data = json.load(f)
-                        factions = data.get("factions", [])
-                        if isinstance(factions, list):
-                            for f_tag in factions:
-                                unique_factions.add(f_tag.strip().upper())
-                except Exception as e:
-                    print(f"Error reading {filename} for factions: {e}")
+        if os.path.exists(loadout_folder):
+            for filename in os.listdir(loadout_folder):
+                if filename.endswith(".json"):
+                    try:
+                        with open(os.path.join(loadout_folder, filename), 'r') as f:
+                            data = json.load(f)
+                            factions = data.get("factions", [])
+                            if isinstance(factions, list):
+                                for f_tag in factions:
+                                    unique_factions.add(f_tag.strip().upper())
+                    except Exception as e:
+                        print(f"Error reading {filename} for factions: {e}")
 
         # Return "ALL" followed by the sorted unique tags
         return ["ALL"] + sorted(list(unique_factions))
