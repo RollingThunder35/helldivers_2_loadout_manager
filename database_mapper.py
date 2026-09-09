@@ -298,7 +298,7 @@ def load_gold_database():
         print(f"Warning: Wiki database not found or invalid: {gold_path}")
         return {}
 
-def canonicalize_item_name(ocr_name, db_name, gold_db, threshold=75):
+def canonicalize_item_name(ocr_name, db_name, gold_db, threshold=80):
     """Return the gold database name when OCR produces a close enough match."""
     if not ocr_name:
         return ocr_name, 0
@@ -311,7 +311,7 @@ def canonicalize_item_name(ocr_name, db_name, gold_db, threshold=75):
     best_score = 0
     target = ocr_name.upper().strip()
     for candidate in candidates:
-        score = fuzz.WRatio(target, candidate.upper().strip())
+        score = fuzz.ratio(target, candidate.upper().strip())
         if score > best_score:
             best_name = candidate
             best_score = score

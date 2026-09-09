@@ -8,11 +8,12 @@ from thefuzz import fuzz
 
 
 class LoadoutCreator:
-    def __init__(self, parent, manager, refresh_callback, edit_data=None):
+    def __init__(self, parent, manager, refresh_callback, edit_data=None, faction_options=None):
         self.parent = parent
         self.manager = manager
         self.refresh_callback = refresh_callback
         self.edit_data = edit_data
+        self.faction_options = faction_options or []
         self.selections = {}
 
         self.creator = tk.Toplevel(parent)
@@ -51,8 +52,21 @@ class LoadoutCreator:
 
         tk.Label(self.creator, text="FACTIONS (Comma Separated):", bg="#1a1a1a", fg="#ffe81f",
                  font=("Courier", 10, "bold")).pack(pady=(10, 0))
-        tk.Entry(self.creator, textvariable=self.draft_factions, bg="#2a2a2a", fg="white",
-                 insertbackground="white").pack(fill="x", padx=40, pady=5)
+        faction_frame = tk.Frame(self.creator, bg="#1a1a1a")
+        faction_frame.pack(fill="x", padx=40, pady=5)
+        tk.Entry(faction_frame, textvariable=self.draft_factions, bg="#2a2a2a", fg="white",
+                 insertbackground="white").pack(side="left", fill="x", expand=True)
+
+        self.faction_choice = tk.StringVar()
+        faction_dropdown = ttk.Combobox(
+            faction_frame,
+            textvariable=self.faction_choice,
+            values=self.faction_options,
+            state="readonly",
+            width=18
+        )
+        faction_dropdown.pack(side="left", padx=(8, 0))
+        faction_dropdown.bind("<<ComboboxSelected>>", self.add_selected_faction)
 
         tk.Label(self.creator, text="1. SELECT CATEGORY", bg="#1a1a1a", fg="white",
                  font=("Courier", 10, "bold")).pack(pady=(15, 0))
@@ -157,6 +171,18 @@ class LoadoutCreator:
         else:
             self.selections[category] = selection
             self.update_selection_display()
+
+    def add_selected_faction(self, event=None):
+        selected_faction = self.faction_choice.get().strip().upper()
+        if not selected_faction:
+            return
+
+        factions = [faction.strip().upper() for faction in self.draft_factions.get().split(",") if faction.strip()]
+        if selected_faction not in factions:
+            factions.append(selected_faction)
+            self.draft_factions.set(", ".join(factions))
+
+        self.faction_choice.set("")
 
     def open_swap_dialog(self, list_key, new_item):
         swap_window = tk.Toplevel(self.creator)

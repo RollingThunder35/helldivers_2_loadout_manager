@@ -1,5 +1,5 @@
 import environment_setup
-from utils import focus_hd2_win, validate_loadout_files, validate_loadout_data, ConfigurationError, ROIOverlay
+from utils import FACTION_LIST, focus_hd2_win, validate_loadout_files, validate_loadout_data, ConfigurationError, ROIOverlay
 import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -12,7 +12,6 @@ from loadout_selection import wait_for_lobby, apply_loadout, LoadoutManager
 from database_mapper import construct_gold_db
 from loadout_creator import LoadoutCreator
 import logging
-
 
 # noinspection PyTypeChecker
 class LoadoutGUI:
@@ -147,6 +146,18 @@ class LoadoutGUI:
         )
         self.delete_btn.pack(fill="x", pady=5)
 
+        self.settings_btn = tk.Button(
+            self.left_frame,
+            text="⚙ SETTINGS",
+            bg="#333333",
+            fg="white",
+            font=("Courier", 8),
+            command=self.open_settings,
+            bd=0,
+            pady=5
+        )
+        self.settings_btn.pack(fill="x", pady=5)
+
         # 2. MIDDLE COLUMN: Manifest Preview
         self.mid_frame = tk.LabelFrame(self.main_container, text=" MANIFEST PREVIEW ",
                                        bg="#1a1a1a", fg="#ffe81f", font=("Courier", 10, "bold"))
@@ -269,6 +280,82 @@ class LoadoutGUI:
                 messagebox.showinfo("Loadout Deleted", f"Loadout '{loadout_name}' deleted.", parent=self.root)
             except OSError as error:
                 messagebox.showerror("Delete Error", f"Could not delete loadout: {error}", parent=self.root)
+
+    def open_settings(self):
+
+        def save_settings():
+            values = {}
+            try:
+                for key, _, _ in settings_fields:
+                    delay = float(delay_vars[key].get())
+                    if delay < 0:
+                        raise ValueError
+                    values[key] = delay
+            except ValueError:
+                messagebox.showerror("Invalid Delay", "Enter non-negative numbers for all delay fields.",
+                                        parent=settings_window)
+                return
+
+            try:
+                self.manager.config.save_config({"controls": values})
+                settings_window.destroy()
+                messagebox.showinfo("Settings Saved", "Settings saved successfully.", parent=self.root)
+            except OSError as error:
+                messagebox.showerror("Settings Error", f"Could not save settings: {error}",
+                                        parent=settings_window)
+        
+        def restore_defaults():
+            if not messagebox.askyesno(
+                    "Restore Defaults",
+                    "Restore all settings to their default values? This will immediately overwrite your current settings and cannot be undone.",
+                    parent=settings_window
+            ):
+                return
+
+            values = {key: default for key, _, default in settings_fields}
+            try:
+                self.manager.config.save_config({"controls": values})
+                settings_window.destroy()
+                messagebox.showinfo("Default Settings Restored", "Default settings restored successfully.", parent=self.root)
+            except OSError as error:
+                messagebox.showerror("Settings Error", f"Could not save settings: {error}",
+                                     parent=settings_window)
+
+        settings_window = tk.Toplevel(self.root)
+        settings_window.title("SETTINGS")
+        settings_window.geometry("420x260")
+        settings_window.configure(bg="#1a1a1a")
+        settings_window.transient(self.root)
+        settings_window.grab_set()
+
+        settings_fields = (
+            ("CAT SWITCH DELAY", "Category switch delay (seconds)", 0.4),
+            ("OCR READ DELAY", "OCR read delay (seconds)", 0.3),
+            ("NAV DELAY", "Navigation delay (seconds)", 0.1),
+        )
+        delay_vars = {}
+
+        tk.Label(settings_window, text="SETTINGS", bg="#1a1a1a", fg="#ffe81f",
+                 font=("Courier", 12, "bold")).pack(pady=(15, 10))
+
+        fields_frame = tk.Frame(settings_window, bg="#1a1a1a")
+        fields_frame.pack(fill="x", padx=25)
+        for key, description, default in settings_fields:
+            row = tk.Frame(fields_frame, bg="#1a1a1a")
+            row.pack(fill="x", pady=4)
+            tk.Label(row, text=description, width=30, anchor="w", bg="#1a1a1a", fg="white",
+                     font=("Courier", 8)).pack(side="left")
+            value = self.manager.config.get_control(key, default)   # Read in delay values in settings.json
+            delay_vars[key] = tk.StringVar(value=str(value))
+            tk.Entry(row, textvariable=delay_vars[key], width=10, bg="#2a2a2a", fg="white",
+                     insertbackground="white", justify="right").pack(side="right")
+
+        button_frame = tk.Frame(settings_window, bg="#1a1a1a")
+        button_frame.pack(fill="x", padx=20, pady=18)
+        tk.Button(button_frame, text="RESTORE DEFAULTS", width=16, bg="#e67e22", fg="white",
+                  command=restore_defaults).pack(side="left", padx=5)
+        tk.Button(button_frame, text="SAVE", width=12, bg="#2ecc71", fg="white",
+              command=save_settings).pack(side="right", padx=5)
 
     # --- Mapping Panel Methods ---
     def create_mapping_buttons(self):
@@ -402,6 +489,13 @@ class LoadoutGUI:
 
             # Build manifest
             manifest = f"--- {data.get("name").upper()} ---\n\n"
+            factions = data.get("factions")
+            if factions:
+                manifest += "FACTIONS:\n"
+                manifest += ", ".join(str(f).upper() for f in factions) + "\n\n"
+            else:
+                manifest += "FACTIONS:\nN/A\n\n"
+
             for cat in ["primary", "secondary", "grenade", "armor", "helmet", "cape"]:
                 if cat in data:
                     item_val = data[cat].replace("\n", "").strip()
@@ -521,30 +615,36 @@ class LoadoutGUI:
         self.manager.required_only = False
 
     def get_unique_factions(self):
-        """Scans all JSON files to find every unique faction tag."""
-        unique_factions = set()  # Use a set to prevent duplicates
+        """Return built-in factions together with user-defined faction tags."""
+        unique_factions = set(FACTION_LIST)  # Start with the built-in factions
         loadout_folder = os.path.join(self.manager.config.basepath, "loadouts")
 
-        if not os.path.exists(loadout_folder):
-            return ["ALL"]
-
-        for filename in os.listdir(loadout_folder):
-            if filename.endswith(".json"):
-                try:
-                    with open(os.path.join(loadout_folder, filename), 'r') as f:
-                        data = json.load(f)
-                        factions = data.get("factions", [])
-                        if isinstance(factions, list):
-                            for f_tag in factions:
-                                unique_factions.add(f_tag.strip().upper())
-                except Exception as e:
-                    print(f"Error reading {filename} for factions: {e}")
+        if os.path.exists(loadout_folder):
+            for filename in os.listdir(loadout_folder):
+                if filename.endswith(".json"):
+                    try:
+                        with open(os.path.join(loadout_folder, filename), 'r') as f:
+                            data = json.load(f)
+                            factions = data.get("factions", [])
+                            if isinstance(factions, list):
+                                for f_tag in factions:
+                                    unique_factions.add(f_tag.strip().upper())
+                    except Exception as e:
+                        print(f"Error reading {filename} for factions: {e}")
 
         # Return "ALL" followed by the sorted unique tags
         return ["ALL"] + sorted(list(unique_factions))
 
     def open_loadout_creator(self, edit_data=None):
-        LoadoutCreator(self.root, self.manager, self.refresh_loadouts, edit_data)
+        # We exclude "ALL" from the faction options by slicing [1:]
+        # It should only be used in the main GUI for filtering, and not the LoadoutCreator window
+        LoadoutCreator(
+            self.root,
+            self.manager,
+            self.refresh_loadouts,
+            edit_data,
+            self.get_unique_factions()[1:]
+        )
 
 def patched_print(*args, **kwargs):
     """Overrides the built-in print to use logging instead."""

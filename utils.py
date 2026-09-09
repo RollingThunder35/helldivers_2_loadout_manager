@@ -15,6 +15,8 @@ SECONDARY_CATS = ["PISTOL", "MELEE", "SPECIAL"]
 GRENADE_CATS = ["STANDARD THROWABLE", "SPECIAL THROWABLE"]
 ARMOR_CATS = ["LIGHT", "MEDIUM", "HEAVY"]
 
+FACTION_LIST = ["TERMINIDS", "AUTOMATONS", "ILLUMINATE"]
+
 # Error exception classes
 class ConfigurationError(Exception):
     """Exception raised for missing or invalid ROI coordinates."""
