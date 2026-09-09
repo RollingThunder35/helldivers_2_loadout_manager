@@ -636,7 +636,15 @@ class LoadoutGUI:
         return ["ALL"] + sorted(list(unique_factions))
 
     def open_loadout_creator(self, edit_data=None):
-        LoadoutCreator(self.root, self.manager, self.refresh_loadouts, edit_data)
+        # We exclude "ALL" from the faction options by slicing [1:]
+        # It should only be used in the main GUI for filtering, and not the LoadoutCreator window
+        LoadoutCreator(
+            self.root,
+            self.manager,
+            self.refresh_loadouts,
+            edit_data,
+            self.get_unique_factions()[1:]
+        )
 
 def patched_print(*args, **kwargs):
     """Overrides the built-in print to use logging instead."""
