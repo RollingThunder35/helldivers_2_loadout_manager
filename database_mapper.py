@@ -133,7 +133,12 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
             continue
 
         for row in range(35):
+            print(f"Anchoring Row {row}.")
             row_anchor = ocr_from_screen(item_roi, overlay_tool)
+            current_item, match_score = canonicalize_item_name(row_anchor, db_name, gold_db)
+            if current_item != row_anchor:
+                print(f"Anchor gold match: '{row_anchor}' -> '{current_item}' ({match_score}%)")
+                row_anchor = current_item
             col = 0
 
             while True:
@@ -154,8 +159,12 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
                 time.sleep(config.get_control("OCR READ DELAY", 0.3))
 
                 # Have to hardcode the number of columns in the armor table due to the B01s
-                reread = ocr_from_screen(item_roi, overlay_tool)
-                if "B-01" not in row_anchor and fuzz.ratio(row_anchor, reread) > fuzzy_threshold:
+                anchor_check = ocr_from_screen(item_roi, overlay_tool)
+                current_item, match_score = canonicalize_item_name(anchor_check, db_name, gold_db)
+                if current_item != anchor_check:
+                    print(f"Anchor Check Gold match: '{anchor_check}' -> '{current_item}' ({match_score}%)")
+                    anchor_check = current_item
+                if "B-01" not in row_anchor and fuzz.ratio(row_anchor, anchor_check) > fuzzy_threshold:
                     break
                 elif "B-01" in row_anchor and col > 1:
                     break
@@ -169,7 +178,7 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
                     # (previously only stopped by the pydirectinput fail-safe).
                     print(f"WARNING: Row {row} exceeded {MAX_COLS_PER_ROW} columns "
                           f"without detecting a wrap (row_anchor='{row_anchor}', "
-                          f"last_read='{reread}'). Forcing row break -- please "
+                          f"last_read='{anchor_check}'). Forcing row break -- please "
                           f"verify this category's mapping manually.")
                     break
                 col += 1
@@ -178,7 +187,9 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
             time.sleep(config.get_control("OCR READ DELAY", 0.3))
 
             # Category Change: If 'S' changes the category
-            if fuzz.partial_ratio(cat_name, ocr_from_screen(cat_roi, overlay_tool)) < fuzzy_threshold:
+            cat_reread = ocr_from_screen(cat_roi, overlay_tool)
+            if fuzz.partial_ratio(cat_name, cat_reread) < fuzzy_threshold:
+                print(f"New Category Detected: {cat_reread} instead of {cat_name}")
                 print("Category change detected. Mapping complete.")
                 break
 
@@ -204,10 +215,19 @@ def map_flat_grid(db_name, item_roi, overlay_tool=None):
     time.sleep(0.5)
 
     global_anchor = ocr_from_screen(item_roi, overlay_tool)
+    current_item, match_score = canonicalize_item_name(global_anchor, db_name, gold_db)
+    if current_item != global_anchor:
+        print(f"Global Anchor gold match: '{global_anchor}' -> '{current_item}' ({match_score}%)")
+        global_anchor = current_item
     print(f"Starting Flat Map. Global Anchor: {global_anchor}")
 
     for row in range(35):
+        print(f"Anchoring Row {row}.")
         row_anchor = ocr_from_screen(item_roi, overlay_tool)
+        current_item, match_score = canonicalize_item_name(row_anchor, db_name, gold_db)
+        if current_item != row_anchor:
+            print(f"Anchor gold match: '{row_anchor}' -> '{current_item}' ({match_score}%)")
+            row_anchor = current_item
         col = 0
 
         while True:
@@ -223,7 +243,12 @@ def map_flat_grid(db_name, item_roi, overlay_tool=None):
             time.sleep(config.get_control("OCR READ DELAY", 0.3))
 
             # Have to hardcode the number of columns in the helmet table due to the B01s
-            if "B-01" not in row_anchor and fuzz.ratio(row_anchor, ocr_from_screen(item_roi, overlay_tool)) > fuzzy_threshold:
+            anchor_check = ocr_from_screen(item_roi, overlay_tool)
+            current_item, match_score = canonicalize_item_name(anchor_check, db_name, gold_db)
+            if current_item != anchor_check:
+                print(f"Anchor Check Gold match: '{anchor_check}' -> '{current_item}' ({match_score}%)")
+                anchor_check = current_item
+            if "B-01" not in row_anchor and fuzz.ratio(row_anchor, anchor_check) > fuzzy_threshold:
                 break
             elif "B-01" in row_anchor and col > 1:
                 break
