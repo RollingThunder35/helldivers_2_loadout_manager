@@ -24,6 +24,11 @@ reader = easyocr.Reader(['en'], gpu=False, verbose=False)
 
 GOLD_DB_FILE = "gold_wiki_db.json"
 
+# Widest row observed across every mapped category is 5 columns (e.g. the
+# stratagem OFFENSIVE table). Used as a safety cap in map_categorized_grid's
+# row-wrap detection -- see the loop below for why it's needed.
+MAX_COLS_PER_ROW = 8
+
 GOLD_DB_CATEGORIES = {
     "primary_db": "Primary_Weapons",
     "secondary_db": "Secondary_Weapons",
@@ -149,9 +154,23 @@ def map_categorized_grid(db_name, item_roi, cat_roi, category_list, perk_roi=Non
                 time.sleep(config.get_control("OCR READ DELAY", 0.3))
 
                 # Have to hardcode the number of columns in the armor table due to the B01s
-                if "B-01" not in row_anchor and fuzz.ratio(row_anchor, ocr_from_screen(item_roi, overlay_tool)) > fuzzy_threshold:
+                reread = ocr_from_screen(item_roi, overlay_tool)
+                if "B-01" not in row_anchor and fuzz.ratio(row_anchor, reread) > fuzzy_threshold:
                     break
                 elif "B-01" in row_anchor and col > 1:
+                    break
+                elif col >= MAX_COLS_PER_ROW:
+                    # Safety valve: the row-wrap re-read above never matched
+                    # row_anchor closely enough to break out normally -- usually
+                    # a single mis-OCR'd character on the wrap-around re-read of
+                    # the row's first item. Without this cap the loop never
+                    # exits and just keeps walking into the next row/category,
+                    # recording real items under the wrong row/col indefinitely
+                    # (previously only stopped by the pydirectinput fail-safe).
+                    print(f"WARNING: Row {row} exceeded {MAX_COLS_PER_ROW} columns "
+                          f"without detecting a wrap (row_anchor='{row_anchor}', "
+                          f"last_read='{reread}'). Forcing row break -- please "
+                          f"verify this category's mapping manually.")
                     break
                 col += 1
 
