@@ -23,7 +23,9 @@ def run_build() -> None:
         '--noconsole',
         '--noupx',
         f'--icon={ICON_PATH}',
-        '--clean'
+        '--clean',
+        '--collect-all=torchvision',
+        '--collect-all=easyocr'
     ]
 
     PyInstaller.__main__.run(params)
