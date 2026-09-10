@@ -297,21 +297,14 @@ class SetupWizard:
 
 
 def verify_dependencies() -> None:
-    """Verifies critical runtime dependencies directly via kernel exit codes.
+    """Verifies critical runtime dependencies required specifically by the Setup Wizard.
 
     Exits immediately with code 0 on success or code 1 if an import fails.
     """
     try:
         import cv2
-        import easyocr
         import numpy
-        import pyautogui
-        import pydirectinput
-        import pygetwindow
-        import requests
-        import torch
-        import torchvision
-        from thefuzz import fuzz
+        import tkinter
         os._exit(0)
     except Exception:
         os._exit(1)
