@@ -40,6 +40,37 @@ jobs:
         run: |
           python build_wizard.py
 
+      - name: Smoke Test Executables
+        shell: powershell
+        run: |
+          function Test-ExecutableDependency {
+            param (
+              [string]$ExePath
+            )
+
+            $pInfo = New-Object System.Diagnostics.ProcessStartInfo
+            $pInfo.FileName = $ExePath
+            $pInfo.Arguments = "--check-deps"
+            $pInfo.UseShellExecute = $false
+
+            $proc = [System.Diagnostics.Process]::Start($pInfo)
+            $exited = $proc.WaitForExit(10000)
+
+            if (-not $exited) {
+              $proc.Kill()
+              Write-Error "$ExePath hung and did not exit within 10 seconds."
+              exit 1
+            }
+
+            if ($proc.ExitCode -ne 0) {
+              Write-Error "$ExePath failed dependency test (Exit Code: $($proc.ExitCode))."
+              exit 1
+            }
+          }
+
+          Test-ExecutableDependency -ExePath ".\dist\SEAF_Loadout_Manager\SEAF_Loadout_Manager.exe"
+          Test-ExecutableDependency -ExePath ".\dist\SEAF_Setup_Wizard\SEAF_Setup_Wizard.exe"
+
       - name: Scan Executables with Windows Defender
         shell: cmd
         run: |

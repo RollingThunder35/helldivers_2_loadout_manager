@@ -651,7 +651,27 @@ def patched_print(*args, **kwargs):
     msg = " ".join(map(str, args))
     logging.info(msg)
 
+def verify_dependencies() -> None:
+    """Verifies critical runtime dependencies directly via kernel exit codes.
+
+    Exits immediately with code 0 on success or code 1 if an import fails.
+    """
+    try:
+        import cv2
+        import easyocr
+        import numpy
+        import requests
+        import torch
+        import torchvision
+        from thefuzz import fuzz
+        os._exit(0)
+    except Exception:
+        os._exit(1)
+
 if __name__ == '__main__':
+    if '--check-deps' in sys.argv:
+        verify_dependencies()
+
     app = LoadoutGUI()
     app.root.mainloop()
 
