@@ -1,4 +1,5 @@
 import os
+import sys
 import tkinter as tk
 from tkinter import messagebox
 
@@ -294,8 +295,32 @@ class SetupWizard:
             return None
         return result["key"]
 
+
+def verify_dependencies() -> None:
+    """Verifies critical runtime dependencies directly via kernel exit codes.
+
+    Exits immediately with code 0 on success or code 1 if an import fails.
+    """
+    try:
+        import cv2
+        import easyocr
+        import numpy
+        import pyautogui
+        import pydirectinput
+        import pygetwindow
+        import requests
+        import torch
+        import torchvision
+        from thefuzz import fuzz
+        os._exit(0)
+    except Exception:
+        os._exit(1)
+
 # --- STANDALONE STARTUP ---
 if __name__ == "__main__":
+    if '--check-deps' in sys.argv:
+        verify_dependencies()
+
     # Initialize the Wizard
     app = SetupWizard()
 
