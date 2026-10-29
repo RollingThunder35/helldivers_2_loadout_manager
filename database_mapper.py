@@ -78,7 +78,8 @@ def ocr_from_screen(roi_coords, roi_overlay=None):
             "HEAUY": "HEAVY", "ADUANCED": "ADVANCED", "CONCUSSIUE": "CONCUSSIVE",
             "SERUICE": "SERVICE", "EUAC": "EVAC", "EUIDENCE": "EVIDENCE",
             "OFFENSIUE": "OFFENSIVE", "DEFENSIUE": "DEFENSIVE", "SERUO": "SERVO",
-            "HOUER": "HOVER"
+            "HOUER": "HOVER",
+            "EXPLOSIUE": "EXPLOSIVE"
         }
 
         for error, correction in font_corrections.items():
