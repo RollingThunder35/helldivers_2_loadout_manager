@@ -10,7 +10,7 @@ from thefuzz import fuzz
 
 from utils import ConfigManager, focus_hd2_win, STRAT_CATS, ARMOR_CATS, GRENADE_CATS, SECONDARY_CATS, PRIMARY_CATS, \
     ConfigurationError
-from database_mapper import ocr_from_screen, map_categorized_grid, map_flat_grid
+from database_mapper import ocr_from_screen, map_categorized_grid, map_flat_grid, load_gold_database, canonicalize_item_name
 
 
 class LoadoutManager:
@@ -222,17 +222,25 @@ class LoadoutManager:
         down_key = self.config.get_control("DOWN", "s")
         switch_key = self.config.get_control("SWITCH", "r")
         read_delay = self.config.get_control("OCR READ DELAY", 0.3)
+        gold_db = load_gold_database()
 
-        def read_item(roi_key):
+        def read_item(roi_key, db_name=None):
+            """Helper to read an item from the screen. If an item_db is provided, canonicalizes it using the gold database."""
             time.sleep(read_delay)
-            return ocr_from_screen(self.config.get_roi(roi_key, (0, 0, 0, 0)), self.overlay_tool)
+            item_text = ocr_from_screen(self.config.get_roi(roi_key, (0, 0, 0, 0)), self.overlay_tool)
+            if db_name:
+                canonical_name, match_score = canonicalize_item_name(item_text, db_name, gold_db)
+                if canonical_name != item_text:
+                    print(f"Read-in gold match: '{item_text}' -> '{canonical_name}' ({match_score}%)")
+                return canonical_name
+            return item_text
 
         loadout = {"stratagems": [], "boosters": []}
 
         # Read 4 stratagems; if no stratagem is selected, it defaults to the first available
         for strat_num in range(1, 5):
             pydirectinput.press(enter_key)
-            loadout["stratagems"].append(read_item("STRAT_ITEM_ROI"))
+            loadout["stratagems"].append(read_item("STRAT_ITEM_ROI", "stratagem_db"))
             pydirectinput.press(escape_key)
             if strat_num < 4:
                 pydirectinput.press(right_key)
@@ -241,28 +249,32 @@ class LoadoutManager:
         # TODO: THIS CURRENTLY DEFAULTS TO 'NO BOOSTER'
         pydirectinput.press(right_key)
         pydirectinput.press(enter_key)
-        loadout["boosters"].append(read_item("BOOSTER_ITEM_ROI"))
+        loadout["boosters"].append(read_item("BOOSTER_ITEM_ROI", "booster_db"))
         pydirectinput.press(escape_key)
 
         # Switch to equipment. The selected slot starts at helmet.
         pydirectinput.press(switch_key)
         equipment = (
-            ("helmet", "HELMET_ITEM_ROI"),
-            ("armor", "ARMOR_ITEM_ROI"),
-            ("cape", "CAPE_ITEM_ROI"),
-            ("grenade", "GRENADE_ITEM_ROI"),
-            ("secondary", "SECONDARY_ITEM_ROI"),
-            ("primary", "PRIMARY_ITEM_ROI")
+            ("helmet", "HELMET_ITEM_ROI", "helmet_db"),
+            ("armor", "ARMOR_ITEM_ROI", "armor_db"),
+            ("cape", "CAPE_ITEM_ROI", "cape_db"),
+            ("grenade", "GRENADE_ITEM_ROI", "grenade_db"),
+            ("secondary", "SECONDARY_ITEM_ROI", "secondary_db"),
+            ("primary", "PRIMARY_ITEM_ROI", "primary_db")
         )
 
-        for index, (loadout_key, roi_key) in enumerate(equipment):
+        for index, (loadout_key, roi_key, db_name) in enumerate(equipment):
             pydirectinput.press(enter_key)
             if loadout_key == "armor":
-                loadout[loadout_key] = f"{read_item(roi_key)} ({read_item('ARMOR_CAT_ROI')} {read_item('ARMOR_PERK_ROI')})"
+                armor_name = read_item(roi_key, db_name)
+                # Be careful not to canonicalize armor category or armor perks, as those are not in the gold database.
+                loadout[loadout_key] = f"{armor_name} ({read_item('ARMOR_CAT_ROI')} {read_item('ARMOR_PERK_ROI')})"
             else:
-                loadout[loadout_key] = read_item(roi_key)
+                loadout[loadout_key] = read_item(roi_key, db_name)
             pydirectinput.press(escape_key)
 
+            # Now we navigate across equipment slots. The navigation order is the same as the list above. 
+            # We use the index to determine which direction to press: Helmet -> Armor -> Cape -> Grenade -> Secondary -> Primary
             if index in (0, 1):
                 pydirectinput.press(right_key)
             elif index == 2:
